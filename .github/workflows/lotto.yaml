@@ -1,0 +1,67 @@
+name: Lotto
+
+on:
+  schedule:
+    - cron: '0 3 * * 0' # UTC 기준, 매주 일요일 12:00 KST
+  workflow_dispatch:
+
+jobs:
+  lotto:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: [ "3.10" ]
+
+    steps:
+      - name: [INIT] Clone repository
+        uses: actions/checkout@v3
+
+      - name: [SET] Setup python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: [SET] Install python package
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps
+
+      - name: [RUN] Buy Lotto and Send Result
+        run: |
+          python lotto_buy.py
+        env:
+          LOTTO_ID: ${{ secrets.LOTTO_ID }}
+          LOTTO_PASSWORD: ${{ secrets.LOTTO_PASSWORD }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+
+  result:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: [ "3.10" ]
+
+    steps:
+      - name: [INIT] Clone repository
+        uses: actions/checkout@v3
+
+      - name: [SET] Setup python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: [SET] Install python package
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps
+
+      - name: [RUN] Buy Lotto and Send Result
+        run: |
+          python lotto_result.py
+        env:
+          LOTTO_ID: ${{ secrets.LOTTO_ID }}
+          LOTTO_PASSWORD: ${{ secrets.LOTTO_PASSWORD }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
