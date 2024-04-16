@@ -3,10 +3,10 @@ import os
 import requests
 from playwright.sync_api import sync_playwright
 
-LOTTO_ID = os.environ.get('LOTTO_ID')
-LOTTO_PASSWORD = os.environ.get('LOTTO_PASSWORD')
-GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
-GITHUB_REPOSITORY = os.environ.get('GITHUB_REPOSITORY')
+LOTTO_ID = os.environ['LOTTO_ID']
+LOTTO_PASSWORD = os.environ['LOTTO_PASSWORD']
+GITHUB_TOKEN = os.environ['GITHUB_TOKEN']
+GITHUB_REPOSITORY = os.environ['GITHUB_REPOSITORY']
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
