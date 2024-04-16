@@ -64,17 +64,18 @@ with sync_playwright() as p:
     for issue in issues:
         url = f"https://api.github.com/repos/{GITHUB_REPOSITORY}/issues/{issue['number']}"
         for data in lotto_data:
-            if data["rnd"] in issue["title"] and ':hourglass:' == issue["labels"]:
-                if data["result"] == "당첨":
-                    win = f"\n당첨금: {data['reward']}"
-                    data = {
-                        'body': f'구매일: {data["date"]}\n잔액: {balance.inner_text()}원 {win}',
-                        'labels': ':tada:'
-                    }
-                else:
-                    data = {
-                        'labels': ':skull_and_crossbones:'
-                    }
+            if data["rnd"] in issue["title"]:
+                if ':hourglass:' == issue["labels"]:
+                    if data["result"] == "당첨":
+                        win = f"\n당첨금: {data['reward']}"
+                        data = {
+                            'body': f'구매일: {data["date"]}\n잔액: {balance.inner_text()}원 {win}',
+                            'labels': ':tada:'
+                        }
+                    elif data["result"] == "낙첨":
+                        data = {
+                            'labels': ':skull_and_crossbones:'
+                        }
             else:
                 data = {
                     "state": "closed"
