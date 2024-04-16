@@ -12,29 +12,26 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install dependencies
-        id: install-packages
-        run: |
-          pip install -r requirements.txt
-          python -m playwright install --with-deps
-
       - name: Cache packages
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Set outputs
-        run: echo "::set-output name=installed-packages::$(echo "${{ steps.install-packages.outputs.stdout }}")"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          python -m playwright install --with-deps
 
   buy-lotto:
     runs-on: ubuntu-latest
@@ -43,23 +40,34 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Restore cached packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Install dependencies
-        run: echo "${{ needs.setup-python.outputs.installed-packages }}" > requirements.txt && pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          python -m playwright install --with-deps
 
       - name: Buy Lotto
         run: python lotto_buy.py
         env:
           LOTTO_ID: ${{ secrets.LOTTO_ID }}
           LOTTO_PASSWORD: ${{ secrets.LOTTO_PASSWORD }}
-          GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ github.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.GITHUB_GITHUB_REPOSITORY }}
 
   update-issue:
     runs-on: ubuntu-latest
@@ -68,20 +76,31 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Restore cached packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Install dependencies
-        run: echo "${{ needs.setup-python.outputs.installed-packages }}" > requirements.txt && pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          python -m playwright install --with-deps
 
       - name: Update Issue
         run: python lotto_result.py
         env:
           LOTTO_ID: ${{ secrets.LOTTO_ID }}
           LOTTO_PASSWORD: ${{ secrets.LOTTO_PASSWORD }}
-          GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ github.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.GITHUB_GITHUB_REPOSITORY }}
