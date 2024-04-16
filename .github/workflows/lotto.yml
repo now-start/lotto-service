@@ -44,5 +44,8 @@ jobs:
         env:
           LOTTO_ID: ${{ secrets.ID }}
           LOTTO_PASSWORD: ${{ secrets.PASSWORD }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          python ./buy_lotto.py
+          python ./lotto_result.py
+          python ./lotto_buy.py
