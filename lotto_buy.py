@@ -67,9 +67,8 @@ with sync_playwright() as playwright:
 
     time.sleep(2)
     # Click text=확인 취소 >> input[type="button"]
-    if page.inner_text("#recommend720Plus > div > div.head > h2") == "구매한도 알림":
-        page.click("text=닫기")
-    page.click("text=확인 취소 >> input[type=\"button\"]")
+    if page.inner_text("#recommend720Plus > div > div.head > h2") != "구매한도 알림":
+        page.click("text=확인 취소 >> input[type=\"button\"]")
 
     # Click input[name="closeLayer"]
     page.click("input[name=\"closeLayer\"]")
