@@ -4,10 +4,10 @@ import time
 import requests
 
 # 동행복권 아이디와 패스워드를 설정
-LOTTO_ID = os.environ.get('LOTTO_ID')
-LOTTO_PASSWORD = os.environ.get('LOTTO_PASSWORD')
-GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
-GITHUB_REPOSITORY = os.environ.get('GITHUB_REPOSITORY')
+LOTTO_ID = os.environ['LOTTO_ID']
+LOTTO_PASSWORD = os.environ['LOTTO_PASSWORD']
+GITHUB_TOKEN = os.environ['GITHUB_TOKEN']
+GITHUB_REPOSITORY = os.environ['GITHUB_REPOSITORY']
 # 구매 개수를 설정
 COUNT = 3
 
