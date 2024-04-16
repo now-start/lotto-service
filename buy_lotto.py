@@ -1,19 +1,14 @@
 import os
+from playwright.sync_api import Playwright, sync_playwright
 import time
 
-import requests
-from playwright.sync_api import sync_playwright
-
 # 동행복권 아이디와 패스워드를 설정
-LOTTO_ID = os.environ.get('LOTTO_ID')
-LOTTO_PASSWORD = os.environ.get('LOTTO_PASSWORD')
-GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
-GITHUB_REPOSITORY = os.environ.get('GITHUB_REPOSITORY')
-
+USER_ID = os.environ['LOTTO_ID']
+USER_PW = os.environ['LOTTO_PASSWORD' ]
 # 구매 개수를 설정
-COUNT = 5
+COUNT = 1
 
-with sync_playwright() as playwright:
+def run(playwright: Playwright) -> None:
 
     # chrome 브라우저를 실행
     browser = playwright.chromium.launch(headless=True)
@@ -29,13 +24,13 @@ with sync_playwright() as playwright:
     page.click("[placeholder=\"아이디\"]")
 
     # Fill [placeholder="아이디"]
-    page.fill("[placeholder=\"아이디\"]", LOTTO_ID)
+    page.fill("[placeholder=\"아이디\"]", USER_ID)
 
     # Press Tab
     page.press("[placeholder=\"아이디\"]", "Tab")
 
     # Fill [placeholder="비밀번호"]
-    page.fill("[placeholder=\"비밀번호\"]", LOTTO_PASSWORD)
+    page.fill("[placeholder=\"비밀번호\"]", USER_PW)
 
     # Press Tab
     page.press("[placeholder=\"비밀번호\"]", "Tab")
@@ -50,10 +45,11 @@ with sync_playwright() as playwright:
     page.goto(url="https://ol.dhlottery.co.kr/olotto/game/game645.do")
     # "비정상적인 방법으로 접속하였습니다. 정상적인 PC 환경에서 접속하여 주시기 바랍니다." 우회하기
     page.locator("#popupLayerAlert").get_by_role("button", name="확인").click()
+    print(page.content())
 
     # Click text=자동번호발급
     page.click("text=자동번호발급")
-    # page.click('#num2 >> text=자동번호발급')
+    #page.click('#num2 >> text=자동번호발급')
 
     # 구매할 개수를 선택
     # Select 1
@@ -72,29 +68,11 @@ with sync_playwright() as playwright:
     # Click input[name="closeLayer"]
     page.click("input[name=\"closeLayer\"]")
     # assert page.url == "https://el.dhlottery.co.kr/game/TotalGame.jsp?LottoId=LO40"
-    page.close()
 
-    page = context.new_page()
-    page.goto("https://dhlottery.co.kr/userSsl.do?method=myPage")
-
-    # 잔액 조회
-    balance = page.query_selector("p.total_new > strong")
-    table = page.query_selector(
-        "table.tbl_data.tbl_data_col > tbody > tr:nth-child(1)")
-    date = table.query_selector("td:nth-child(1)")
-    rnd = table.query_selector("td:nth-child(2)")
-
-    url = f"https://api.github.com/repos/{GITHUB_REPOSITORY}/issues"
-    headers = {
-        'Authorization': f'token {GITHUB_TOKEN}',
-        'Accept': 'application/vnd.github.v3+json'
-    }
-    data = {
-        'title': f'로또6/45 {rnd.inner_text()}회차 구매 ⏳',
-        'body': f'구매일: {date.inner_text()}\n잔액: {balance.inner_text()}원'
-    }
-
-    response = requests.post(url, headers=headers, json=data)
-
+    # ---------------------
     context.close()
     browser.close()
+
+with sync_playwright() as playwright:
+    run(playwright)
+    
