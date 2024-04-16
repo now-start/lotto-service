@@ -47,10 +47,10 @@ with sync_playwright() as p:
         table = page.query_selector(
             f"table.tbl_data.tbl_data_col > tbody > tr:nth-child({i})")
         lotto_data.append({
-            "date": table.query_selector("td:nth-child(1)"),
-            "rnd": table.query_selector("td:nth-child(2)"),
-            "result": table.query_selector("td:nth-child(6)"),
-            "reward": table.query_selector("td:nth-child(7)")
+            "date": table.query_selector("td:nth-child(1)").inner_text(),
+            "rnd": table.query_selector("td:nth-child(2)").inner_text(),
+            "result": table.query_selector("td:nth-child(6)").inner_text(),
+            "reward": table.query_selector("td:nth-child(7)").inner_text()
         })
 
     url = f"https://api.github.com/repos/{GITHUB_REPOSITORY}/issues"
