@@ -42,8 +42,8 @@ jobs:
 
       - name: Run!
         env:
-          LOTTO_ID: ${{ secrets.ID }}
-          LOTTO_PASSWORD: ${{ secrets.PASSWORD }}
+          LOTTO_ID: ${{ secrets.LOTTO_ID }}
+          LOTTO_PASSWORD: ${{ secrets.LOTTO_PASSWORD }}
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
