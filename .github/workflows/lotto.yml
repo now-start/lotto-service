@@ -7,7 +7,7 @@ on:
     - cron: '0 3 * * 0'
 
 jobs:
-  buy:
+  build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -42,51 +42,7 @@ jobs:
 
       - name: Run!
         env:
-          LOTTO_ID: ${{ secrets.LOTTO_ID }}
-          LOTTO_PASSWORD: ${{ secrets.LOTTO_PASSWORD }}
-          GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
+          LOTTO_ID: ${{ secrets.ID }}
+          LOTTO_PASSWORD: ${{ secrets.PASSWORD }}
         run: |
-          python ./lotto_buy.py
-
-  result:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.7]
-
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up python ${{ matrix.python-version }}
-        uses: actions/setup-python@v1
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install python package
-        run: |
-          pip install selenium
-          pip install requests        
-          pip install twython
-          pip install pillow    
-          pip install gspread        
-          pip install --upgrade google-api-python-client oauth2client
-          pip install playwright
-          python -m playwright install ${{ matrix.browser-channel }} --with-deps
-
-      - name: Install ubuntu package
-        run: |
-          sudo apt-get install fonts-unfonts-core
-          sudo apt-get install fonts-unfonts-extra
-          wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add        
-          sudo apt-get install google-chrome-stable    
-          wget https://chromedriver.storage.googleapis.com/100.0.4896.20/chromedriver_linux64.zip
-          unzip ./chromedriver_linux64.zip           
-
-      - name: Run!
-        env:
-          LOTTO_ID: ${{ secrets.LOTTO_ID }}
-          LOTTO_PASSWORD: ${{ secrets.LOTTO_PASSWORD }}
-          GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-        run: |
-          python ./lotto_result.py
+          python ./buy_lotto.py
