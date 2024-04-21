@@ -66,14 +66,18 @@ with sync_playwright() as playwright:
     page.click("input:has-text(\"구매하기\")")
 
     time.sleep(2)
-    # Click text=확인 취소 >> input[type="button"]
-    # if page.inner_text("#recommend720Plus > div > div.head > h2") != "구매한도 알림":
-    page.click("text=확인 취소 >> input[type=\"button\"]")
+    try:
+        # Click text=확인 취소 >> input[type="button"]
+        # if page.inner_text("#recommend720Plus > div > div.head > h2") != "구매한도 알림":
+        page.click("text=확인 취소 >> input[type=\"button\"]")
 
-    # Click input[name="closeLayer"]
-    page.click("input[name=\"closeLayer\"]")
-    # assert page.url == "https://el.dhlottery.co.kr/game/TotalGame.jsp?LottoId=LO40"
-    page.close()
+        # Click input[name="closeLayer"]
+        page.click("input[name=\"closeLayer\"]")
+        # assert page.url == "https://el.dhlottery.co.kr/game/TotalGame.jsp?LottoId=LO40"
+    except:
+        print("구매 실패")
+    finally:
+        page.close()
 
     page = context.new_page()
     page.goto("https://dhlottery.co.kr/userSsl.do?method=myPage")
