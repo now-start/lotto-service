@@ -42,7 +42,7 @@ with sync_playwright() as p:
     balance = page.query_selector("p.total_new > strong")
     lotto_data = []
 
-    for i in range(2, 3):
+    for i in range(1, 2):
         table = page.query_selector(
             f"table.tbl_data.tbl_data_col > tbody > tr:nth-child({i})")
         lotto_data.append({
