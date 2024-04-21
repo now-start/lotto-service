@@ -40,10 +40,9 @@ with sync_playwright() as p:
     page.goto("https://dhlottery.co.kr/userSsl.do?method=myPage")
 
     balance = page.query_selector("p.total_new > strong")
-    win = ""
     lotto_data = []
 
-    for i in range(1, 4):
+    for i in range(2, 3):
         table = page.query_selector(
             f"table.tbl_data.tbl_data_col > tbody > tr:nth-child({i})")
         lotto_data.append({
@@ -65,21 +64,21 @@ with sync_playwright() as p:
         url = f"https://api.github.com/repos/{GITHUB_REPOSITORY}/issues/{issue['number']}"
         for data in lotto_data:
             if data["rnd"] in issue["title"]:
-                if ':hourglass:' == issue["labels"]:
+                if '⌛' in issue["title"]:
                     if data["result"] == "당첨":
-                        win = f"\n당첨금: {data['reward']}"
                         data = {
-                            'body': f'구매일: {data["date"]}\n잔액: {balance.inner_text()}원 {win}',
-                            'labels': ':tada:'
+                            'title': f'로또6/45 {data["rnd"]}회차 구매 🎉',
+                            'body': f'구매일: {data["date"]}\n잔액: {balance.inner_text()}원\n당첨금: {data["reward"]}',
                         }
                     elif data["result"] == "낙첨":
                         data = {
-                            'labels': ':skull_and_crossbones:'
+                            'title': f'로또6/45 {data["rnd"]}회차 구매 ☠️',
+                            'body': f'구매일: {data["date"]}\n잔액: {balance.inner_text()}원\n당첨금: {data["reward"]}',
                         }
             else:
                 data = {
                     "state": "closed"
                 }
-            response = requests.post(url, headers=headers, json=data)
+            requests.post(url, headers=headers, json=data)
 
     browser.close()

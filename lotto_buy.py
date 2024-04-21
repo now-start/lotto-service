@@ -67,11 +67,11 @@ with sync_playwright() as playwright:
 
     time.sleep(2)
     # Click text=확인 취소 >> input[type="button"]
-    if page.inner_text("#recommend720Plus > div > div.head > h2") != "구매한도 알림":
-        page.click("text=확인 취소 >> input[type=\"button\"]")
+    # if page.inner_text("#recommend720Plus > div > div.head > h2") != "구매한도 알림":
+    page.click("text=확인 취소 >> input[type=\"button\"]")
 
-        # Click input[name="closeLayer"]
-        page.click("input[name=\"closeLayer\"]")
+    # Click input[name="closeLayer"]
+    page.click("input[name=\"closeLayer\"]")
     # assert page.url == "https://el.dhlottery.co.kr/game/TotalGame.jsp?LottoId=LO40"
     page.close()
 
@@ -91,9 +91,8 @@ with sync_playwright() as playwright:
         'Accept': 'application/vnd.github.v3+json'
     }
     data = {
-        'title': f'로또6/45 {rnd.inner_text()}회차 구매',
-        'body': f'구매일: {date.inner_text()}\n잔액: {balance.inner_text()}원',
-        'labels': ':hourglass:'
+        'title': f'로또6/45 {rnd.inner_text()}회차 구매 ⌛',
+        'body': f'구매일: {date.inner_text()}\n잔액: {balance.inner_text()}원'
     }
 
     response = requests.post(url, headers=headers, json=data)
