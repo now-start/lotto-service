@@ -7,9 +7,6 @@ on:
     - cron: '0 0 * * 3'
   workflow_dispatch:
   
-permissions:
-  issues: write
-  
 jobs:
   lotto:
     runs-on: ubuntu-latest
