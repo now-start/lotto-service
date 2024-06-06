@@ -13,7 +13,7 @@ docker-compose
 version: '3.8'
 services:
   lotto-app:
-    image: ghcr.io/now-start/lotto-app:latest
+    image: ghcr.io/now-start/lotto-service:latest
     environment:
       - LOTTO_ID=your_lotto_id
       - LOTTO_PASSWORD=your_lotto_password
@@ -22,6 +22,7 @@ services:
 ```
 
 ## Notes
+ - `TZ` : 컨테이너 시간대 (Asia/Seoul)
  - `LOTTO_ID` : 로또 사이트 아이디
  - `LOTTO_PASSWORD` : 로또 사이트 비밀번호
  - `GITHUB_TOKEN` : 깃허브 토큰
