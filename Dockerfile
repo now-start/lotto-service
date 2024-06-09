@@ -1,9 +1,9 @@
-FROM python:3.9-slim-buster
+# Build stage
+FROM python:3.9-slim-buster as builder
 
 WORKDIR /app
 ADD . /app
 
-# Install dependencies and clean up in one RUN command
 RUN apt-get update && apt-get install -y \
     wget \
     unzip \
@@ -50,6 +50,13 @@ RUN apt-get update && apt-get install -y \
     rm -rf /var/lib/apt/lists/* && \
     pip install --no-cache-dir -r requirements.txt && \
     python -m playwright install
+
+# Final stage
+FROM python:3.9-slim-buster
+
+WORKDIR /app
+COPY --from=builder /app /app
+COPY --from=builder /root/.cache/ms-playwright/ /root/.cache/ms-playwright/
 
 # Install supervisor
 RUN apt-get update && apt-get install -y supervisor
