@@ -27,3 +27,5 @@ services:
  - `LOTTO_PASSWORD` : 로또 사이트 비밀번호
  - `GITHUB_TOKEN` : 깃허브 토큰
  - `GITHUB_REPOSITORY` : 깃허브 저장소 (now-start/lotto-service)
+ - `RESULT_SCHEDULE` : 결과 조회 스케줄 (m h  dom mon dow)
+ - `BUY_SCHEDULE` : 구매 스케줄 (m h  dom mon dow)
