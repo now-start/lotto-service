@@ -42,7 +42,8 @@ RUN apt-get update && apt-get install -y \
     libappindicator1 \
     libnss3 \
     lsb-release \
-    xdg-utils && \
+    xdg-utils \
+    cron && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
