@@ -1,6 +1,6 @@
 # For more information see the manual pages of crontab(5) and cron(8)
 #
 # m h  dom mon dow   command
-0 0 * * 0 python /app/lotto_buy.py >> /var/log/cron.log 2>&1
-0 0 * * 0 python /app/lotto_result.py >> /var/log/cron.log 2>&1
+17 10 * * 0 python /app/lotto_buy.py >> /var/log/cron.log 2>&1
+15 10 * * 0 python /app/lotto_result.py >> /var/log/cron.log 2>&1
 #
