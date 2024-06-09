@@ -52,14 +52,14 @@ RUN apt-get update && apt-get install -y \
     pip install --no-cache-dir -r requirements.txt && \
     python -m playwright install
 
-# Install supervisor
-RUN apt-get update && apt-get install -y supervisor
-
 # Second stage
 FROM python:3.9-slim-buster
 
 WORKDIR /app
 COPY --from=builder /app /app
+
+# Install supervisor
+RUN apt-get update && apt-get install -y supervisor
 
 # Add supervisor configuration file
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
@@ -68,5 +68,6 @@ RUN touch /var/log/cron.log
 
 ENV RESULT_SCHEDULE="0 0 * * 0"
 ENV BUY_SCHEDULE="10 0 * * 0"
+
 RUN which supervisord
-CMD ["/usr/local/bin/supervisord"]
+CMD ["/usr/bin/supervisord"]
