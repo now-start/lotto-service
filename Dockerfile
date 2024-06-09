@@ -69,5 +69,4 @@ RUN touch /var/log/cron.log
 ENV RESULT_SCHEDULE="0 0 * * 0"
 ENV BUY_SCHEDULE="10 0 * * 0"
 
-RUN which supervisord
 CMD ["/usr/bin/supervisord"]
