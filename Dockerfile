@@ -52,18 +52,21 @@ RUN apt-get update && apt-get install -y \
     pip install --no-cache-dir -r requirements.txt && \
     python -m playwright install
 
+# Install supervisor
+RUN apt-get update && apt-get install -y supervisor
+
 # Second stage
 FROM python:3.9-slim-buster
 
 WORKDIR /app
 COPY --from=builder /app /app
 
+# Add supervisor configuration file
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
 RUN touch /var/log/cron.log
 
 ENV RESULT_SCHEDULE="0 0 * * 0"
 ENV BUY_SCHEDULE="10 0 * * 0"
 
-CMD echo "$RESULT_SCHEDULE python /app/lotto_result.py >> /var/log/cron.log 2>&1" | crontab - && \
-    echo "$BUY_SCHEDULE python /app/lotto_buy.py >> /var/log/cron.log 2>&1" | crontab - && \
-    cron && \
-    tail -f /var/log/cron.log
+CMD ["/usr/bin/supervisord"]
