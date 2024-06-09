@@ -1,6 +1,10 @@
-FROM python:3.9-slim-buster
+# Use multi-stage build
+FROM python:3.9-slim-buster as builder
 
-# Install dependencies
+WORKDIR /app
+ADD . /app
+
+# Install dependencies and clean up in one RUN command
 RUN apt-get update && apt-get install -y \
     wget \
     unzip \
@@ -44,14 +48,15 @@ RUN apt-get update && apt-get install -y \
     lsb-release \
     xdg-utils \
     cron && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    pip install --no-cache-dir -r requirements.txt && \
+    python -m playwright install
+
+# Second stage
+FROM python:3.9-slim-buster
 
 WORKDIR /app
-ADD . /app
-
-RUN pip install --no-cache-dir -r requirements.txt
-
-RUN python -m playwright install
+COPY --from=builder /app /app
 
 RUN touch /var/log/cron.log
 
