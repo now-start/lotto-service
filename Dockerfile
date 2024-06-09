@@ -1,5 +1,4 @@
-# Use multi-stage build
-FROM python:3.9-slim-buster as builder
+FROM python:3.9-slim-buster
 
 WORKDIR /app
 ADD . /app
@@ -51,12 +50,6 @@ RUN apt-get update && apt-get install -y \
     rm -rf /var/lib/apt/lists/* && \
     pip install --no-cache-dir -r requirements.txt && \
     python -m playwright install
-
-# Second stage
-FROM python:3.9-slim-buster
-
-WORKDIR /app
-COPY --from=builder /app /app
 
 # Install supervisor
 RUN apt-get update && apt-get install -y supervisor
