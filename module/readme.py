@@ -1,3 +1,5 @@
+import os
+
 def read_file(file_path):
   with open(file_path, 'r') as file:
     return file.read()
@@ -19,10 +21,14 @@ def replace_docker_section(readme_content, markdown):
 
 
 if __name__ == "__main__":
-  yaml_content = read_file('../docker-compose.yaml')
+  script_dir = os.path.dirname(os.path.realpath(__file__))
+  yaml_file_path = os.path.join(script_dir, '../docker-compose.yaml')
+  readme_file_path = os.path.join(script_dir, '../README.md')
+
+  yaml_content = read_file(yaml_file_path)
   markdown = format_as_markdown(yaml_content)
 
-  readme_content = read_file('../README.md')
+  readme_content = read_file(readme_file_path)
   updated_readme = replace_docker_section(readme_content, markdown)
 
-  write_file('../README.md', updated_readme)
+  write_file(readme_file_path, updated_readme)
