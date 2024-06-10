@@ -17,6 +17,8 @@ services:
     environment:
       - LOTTO_ID=your_lotto_id
       - LOTTO_PASSWORD=your_lotto_password
+      - LOTTO_NOTIFICATIONS=none
+
 ```
 
 ## Environment
