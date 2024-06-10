@@ -25,7 +25,7 @@ jobs:
             data = file.read()
           
           # Format as Markdown
-            markdown = '```yaml\n' + data + '\n```'
+            markdown = '```yaml\\n' + data + '\\n```'
           
           # Read README.md
           with open('README.md', 'r') as file:
