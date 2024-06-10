@@ -32,7 +32,7 @@ jobs:
               data = yaml.safe_load(file)
 
           # Format as Markdown
-          markdown = '```yaml\n' + yaml.dump(data) + '```\n'
+          markdown = '```yaml\\n' + yaml.dump(data) + '```\\n'
 
           # Read README.md
           with open('README.md', 'r') as file:
