@@ -35,3 +35,5 @@ G.idea/sonarlint/issuestore/e/f/ef8def03dc8f162799089e9b5f4321201c8810d5,8/4/84
 lotto_result.py,8/7/877b383dd1864e0361ed5eea7162f2db4684868a
 M
 .github/workflows/readme.yaml,a/1/a11cb288da0a83b71cafd238bd0b2ff225f8a0f2
+<
+lotto_buy.py,a/3/a357e93df79745a5b6602d9c1a89fb70d8a5cedb
