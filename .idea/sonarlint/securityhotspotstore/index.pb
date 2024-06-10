@@ -37,3 +37,11 @@ M
 .github/workflows/readme.yaml,a/1/a11cb288da0a83b71cafd238bd0b2ff225f8a0f2
 <
 lotto_buy.py,a/3/a357e93df79745a5b6602d9c1a89fb70d8a5cedb
+@
+module/readme.py,b/2/b2ce16a2a60c365b427a157f69df23b9ad4df683
+@
+module/github.py,0/8/08c22395c17df98454a125c1e2c5c0894799e020
+@
+module/config.py,2/0/207522b7878c32e883bd0828754d37620c3eb1a2
+?
+module/login.py,1/5/15f2651f5b8e66b45ffd14a33b9791e31121d73e

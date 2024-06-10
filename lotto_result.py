@@ -1,84 +1,40 @@
-import os
+from module.config import Config
+from module.github import Github
+from module.login import Login
 
-import requests
-from playwright.sync_api import sync_playwright
 
-LOTTO_ID = os.environ['LOTTO_ID']
-LOTTO_PASSWORD = os.environ['LOTTO_PASSWORD']
-GITHUB_TOKEN = os.environ['GITHUB_TOKEN']
-GITHUB_REPOSITORY = os.environ['GITHUB_REPOSITORY']
+class LottoResultChecker(Login):
+    def check_result(self, page):
+        page.goto("https://dhlottery.co.kr/userSsl.do?method=myPage")
+        balance = page.query_selector("p.total_new > strong")
+        lotto_data = []
+        for i in range(1, 2):
+            table = page.query_selector(
+                f"table.tbl_data.tbl_data_col > tbody > tr:nth-child({i})")
+            lotto_data.append({
+                "date": table.query_selector("td:nth-child(1)").inner_text(),
+                "rnd": table.query_selector("td:nth-child(2)").inner_text(),
+                "result": table.query_selector("td:nth-child(6)").inner_text(),
+                "reward": table.query_selector("td:nth-child(7)").inner_text()
+            })
+        return lotto_data, balance
 
-with sync_playwright() as p:
-    browser = p.chromium.launch(headless=True)
-    page = browser.new_page()
+    def run(self):
+        try:
+            page = self.context.new_page()
+            self.login(page)
+            lotto_data, balance = self.check_result(page)
+        except Exception as e:
+            print(f"결과 확인 실패: {e}")
+            raise
+        finally:
+            self.close()
 
-    # Go to https://dhlottery.co.kr/user.do?method=login
-    page.goto("https://dhlottery.co.kr/user.do?method=login")
+        if "github" in Config.LOTTO_NOTIFICATIONS:
+            Github.post_result(lotto_data, balance)
+        if "email" in Config.LOTTO_NOTIFICATIONS:
+            pass
 
-    # Click [placeholder="아이디"]
-    page.click("[placeholder=\"아이디\"]")
 
-    # Fill [placeholder="아이디"]
-    page.fill("[placeholder=\"아이디\"]", LOTTO_ID)
-
-    # Press Tab
-    page.press("[placeholder=\"아이디\"]", "Tab")
-
-    # Fill [placeholder="비밀번호"]
-    page.fill("[placeholder=\"비밀번호\"]", LOTTO_PASSWORD)
-
-    # Press Tab
-    page.press("[placeholder=\"비밀번호\"]", "Tab")
-
-    # Press Enter
-    # with page.expect_navigation(url="https://ol.dhlottery.co.kr/olotto/game/game645.do"):
-    with page.expect_navigation():
-        page.press("form[name=\"jform\"] >> text=로그인", "Enter")
-
-    # time.sleep(5)
-
-    page.goto("https://dhlottery.co.kr/userSsl.do?method=myPage")
-
-    balance = page.query_selector("p.total_new > strong")
-    lotto_data = []
-
-    for i in range(1, 2):
-        table = page.query_selector(
-            f"table.tbl_data.tbl_data_col > tbody > tr:nth-child({i})")
-        lotto_data.append({
-            "date": table.query_selector("td:nth-child(1)").inner_text(),
-            "rnd": table.query_selector("td:nth-child(2)").inner_text(),
-            "result": table.query_selector("td:nth-child(6)").inner_text(),
-            "reward": table.query_selector("td:nth-child(7)").inner_text()
-        })
-
-    url = f"https://api.github.com/repos/{GITHUB_REPOSITORY}/issues"
-    headers = {
-        "Authorization": f"Bearer {GITHUB_TOKEN}",
-        "Accept": "application/vnd.github.v3+json"
-    }
-
-    response = requests.get(url, params={'state': 'open'}, headers=headers)
-    issues = response.json()
-    for issue in issues:
-        url = f"https://api.github.com/repos/{GITHUB_REPOSITORY}/issues/{issue['number']}"
-        for data in lotto_data:
-            if data["rnd"] in issue["title"]:
-                if '⌛' in issue["title"]:
-                    if data["result"] == "당첨":
-                        data = {
-                            'title': f'로또6/45 {data["rnd"]}회차 구매 🎉',
-                            'body': f'구매일: {data["date"]}\n잔액: {balance.inner_text()}원\n당첨금: {data["reward"]}',
-                        }
-                    elif data["result"] == "낙첨":
-                        data = {
-                            'title': f'로또6/45 {data["rnd"]}회차 구매 ☠️',
-                            'body': f'구매일: {data["date"]}\n잔액: {balance.inner_text()}원\n당첨금: {data["reward"]}',
-                        }
-            else:
-                data = {
-                    "state": "closed"
-                }
-            requests.post(url, headers=headers, json=data)
-
-    browser.close()
+if __name__ == "__main__":
+    LottoResultChecker().run()
