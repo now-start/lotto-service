@@ -15,7 +15,7 @@ jobs:
       - name: "[SET] Set up Python"
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"l
+          python-version: "3.10"
 
       - name: "[RUN] Update README"
         run: |
