@@ -10,7 +10,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && \
     pip install --upgrade pip && \
     pip install -r requirements.txt && \
-    python -m playwright install-deps
+    python -m playwright install --with-deps
 
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
