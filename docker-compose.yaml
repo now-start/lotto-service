@@ -1,4 +1,4 @@
-version: '3.8'
+version: '3'
 services:
   lotto-app:
     image: ghcr.io/now-start/lotto-service:latest
