@@ -5,7 +5,4 @@ services:
     environment:
       - LOTTO_ID=your_lotto_id
       - LOTTO_PASSWORD=your_lotto_password
-      - GITHUB_TOKEN=your_github_token
-      - GITHUB_REPOSITORY=your_github_repository
-      - RESULT_SCHEDULE=0 0 * * 0
-      - BUY_SCHEDULE=10 0 * * 0
+      - PUSH_OPTION=none
