@@ -1,0 +1,56 @@
+name: Update README
+
+on:
+  push:
+    paths:
+      - 'docker-compose.yaml'
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.10
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml
+
+      - name: Update README
+        run: |
+          python -c "
+          import yaml
+
+          # Read docker-compose.yaml
+          with open('docker-compose.yaml', 'r') as file:
+              data = yaml.safe_load(file)
+
+          # Format as Markdown
+          markdown = '```yaml\n' + yaml.dump(data) + '```\n'
+
+          # Read README.md
+          with open('README.md', 'r') as file:
+              readme = file.read()
+
+          # Replace the Docker section
+          start = readme.index('```yaml')
+          end = readme.index('```', start + 1) + 3
+          updated_readme = readme[:start] + markdown + readme[end:]
+
+          # Write back to README.md
+          with open('README.md', 'w') as file:
+              file.write(updated_readme)
+          "
+
+      - name: Commit and push if it changed
+        run: |
+          git diff
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Action"
+          git commit -am "Update README.md" && git push origin || echo "No changes to commit"

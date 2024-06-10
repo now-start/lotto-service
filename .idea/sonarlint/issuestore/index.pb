@@ -31,3 +31,7 @@ w
 G.idea/sonarlint/issuestore/8/e/8ec9a00bfd09b3190ac6b22251dbb1aa95a0579d,b/4/b4a0b63ce8560bbc5de0f9995c20cc861dc2adb3
 w
 G.idea/sonarlint/issuestore/e/f/ef8def03dc8f162799089e9b5f4321201c8810d5,8/4/84cee910007e409d590b121a25231a4f7ec98caa
+?
+lotto_result.py,8/7/877b383dd1864e0361ed5eea7162f2db4684868a
+M
+.github/workflows/readme.yaml,a/1/a11cb288da0a83b71cafd238bd0b2ff225f8a0f2
