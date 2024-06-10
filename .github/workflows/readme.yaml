@@ -19,26 +19,26 @@ jobs:
 
       - name: "[RUN] Update README"
         run: |
-          python -c "
-          # Read docker-compose.yaml
-          with open('docker-compose.yaml', 'r') as file:
-            data = file.read()
-          
-          # Format as Markdown
-            markdown = '```yaml\\n' + data + '\\n```'
-          
-          # Read README.md
-          with open('README.md', 'r') as file:
-            readme = file.read()
-          
-          # Replace the Docker section
-            start = readme.index('```yaml')
-            end = readme.index('```', start + 1) + 3
-            updated_readme = readme[:start] + markdown + readme[end:]
-          
-          # Write back to README.md
-          with open('README.md', 'w') as file:
-            file.write(updated_readme)
+          python -c "\
+          # Read docker-compose.yaml\n\
+          with open('docker-compose.yaml', 'r') as file:\n\
+            data = file.read()\n\
+          \n\
+          # Format as Markdown\n\
+            markdown = '```yaml\\n' + data + '\\n```'\n\
+          \n\
+          # Read README.md\n\
+          with open('README.md', 'r') as file:\n\
+            readme = file.read()\n\
+          \n\
+          # Replace the Docker section\n\
+            start = readme.index('```yaml')\n\
+            end = readme.index('```', start + 1) + 3\n\
+            updated_readme = readme[:start] + markdown + readme[end:]\n\
+          \n\
+          # Write back to README.md\n\
+          with open('README.md', 'w') as file:\n\
+            file.write(updated_readme)\n\
           "
 
       - name: "[RUN] Commit and push if it changed"
