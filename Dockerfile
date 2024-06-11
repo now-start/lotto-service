@@ -15,7 +15,7 @@ RUN apt-get update && \
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 ENV TZ="Asia/Seoul"
-ENV RESULT_SCHEDULE="0 0 * * 0"
-ENV BUY_SCHEDULE="10 0 * * 0"
+ENV LOTTO_SCHEDULE="0 0 * * 0"
+ENV LOTTO_NOTIFICATIONS="none"
 
 CMD ["/usr/bin/supervisord"]
