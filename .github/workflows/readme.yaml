@@ -19,7 +19,7 @@ jobs:
 
       - name: "[RUN] Update README"
         run: |
-          python src/module/Readme.py
+          python src/utils/Readme.py
 
       - name: "[RUN] Commit and push if it changed"
         run: |
