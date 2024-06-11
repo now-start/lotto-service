@@ -1,8 +1,8 @@
 import time
 
-from module.config import Config
-from module.github import Github
-from module.login import Login
+from utils.Config import Config
+from src.main.module.Github import Github
+from src.main.module.Login import Login
 
 
 class LottoBuyer(Login):
@@ -44,7 +44,3 @@ class LottoBuyer(Login):
             pass
 
         self.close()
-
-
-if __name__ == "__main__":
-    LottoBuyer().run()

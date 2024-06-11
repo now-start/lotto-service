@@ -1,6 +1,6 @@
-from module.config import Config
-from module.github import Github
-from module.login import Login
+from utils.Config import Config
+from src.main.module.Github import Github
+from src.main.module.Login import Login
 
 
 class LottoResultChecker(Login):
@@ -34,7 +34,3 @@ class LottoResultChecker(Login):
             Github.post_result(lotto_data, balance)
         if "email" in Config.LOTTO_NOTIFICATIONS:
             pass
-
-
-if __name__ == "__main__":
-    LottoResultChecker().run()

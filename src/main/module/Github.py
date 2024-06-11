@@ -1,6 +1,6 @@
 import requests
 
-from module.config import GithubConfig
+from utils.Config import GithubConfig
 
 
 class Github:
