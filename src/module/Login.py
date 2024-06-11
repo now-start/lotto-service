@@ -1,6 +1,6 @@
 from playwright.sync_api import sync_playwright
 
-from utils.Config import Config
+from src.utils.Config import Config
 
 
 class Login:

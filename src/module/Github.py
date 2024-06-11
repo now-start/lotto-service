@@ -1,6 +1,6 @@
 import requests
 
-from utils.Config import GithubConfig
+from src.utils.Config import GithubConfig
 
 
 class Github:

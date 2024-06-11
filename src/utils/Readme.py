@@ -22,8 +22,8 @@ def replace_docker_section(readme_content, markdown):
 
 if __name__ == "__main__":
   script_dir = os.path.dirname(os.path.realpath(__file__))
-  yaml_file_path = os.path.join(script_dir, '../../../docker-compose.yaml')
-  readme_file_path = os.path.join(script_dir, '../../../README.md')
+  yaml_file_path = os.path.join(script_dir, '../../docker-compose.yaml')
+  readme_file_path = os.path.join(script_dir, '../../README.md')
 
   yaml_content = read_file(yaml_file_path)
   markdown = format_as_markdown(yaml_content)

@@ -1,10 +1,6 @@
 name: Lotto
 
 on:
-#  schedule:
-#    # 매 주 일요일 오후 12시, Github Actions 에서는 UTC 기준으로 실행됨
-#    # https://elmah.io/tools/cron-parser/
-#    - cron: '0 0 * * 3'
   workflow_dispatch:
   
 jobs:
@@ -26,34 +22,9 @@ jobs:
 
       - name: "[RUN] Buy Lotto and Send Result"
         run: |
-          python lotto_buy.py
+          python src/LottoServiceApplication.py
         env:
           LOTTO_ID: ${{ secrets.LOTTO_ID }}
           LOTTO_PASSWORD: ${{ secrets.LOTTO_PASSWORD }}
           GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-
-  result:
-    runs-on: ubuntu-latest
-    steps:
-      - name: "[INIT] Clone repository"
-        uses: actions/checkout@v4
-
-      - name: "[SET] Set up Python"
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-
-      - name: "[SET] Install python package"
-        run: |
-          pip install -r requirements.txt
-          python -m playwright install --with-deps
-
-      - name: "[RUN] Issue Update"
-        run: |
-          python lotto_result.py
-        env:
-          LOTTO_ID: ${{ secrets.LOTTO_ID }}
-          LOTTO_PASSWORD: ${{ secrets.LOTTO_PASSWORD }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}

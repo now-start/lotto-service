@@ -1,8 +1,8 @@
 import time
 
-from utils.Config import Config
-from src.main.module.Github import Github
-from src.main.module.Login import Login
+from src.utils.Config import Config
+from src.module.Github import Github
+from src.module.Login import Login
 
 
 class LottoBuyer(Login):
