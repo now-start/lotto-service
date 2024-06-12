@@ -4,8 +4,9 @@ import os
 class Config:
   LOTTO_ID = os.environ['LOTTO_ID']
   LOTTO_PASSWORD = os.environ['LOTTO_PASSWORD']
+  LOTTO_SCHEDULE = os.environ['LOTTO_SCHEDULE']
   LOTTO_NOTIFICATIONS = os.environ['LOTTO_NOTIFICATIONS']
-  COUNT = 5
+  LOTTO_COUNT = os.environ['LOTTO_COUNT'] if 1 <= int(os.environ['LOTTO_COUNT']) <= 5 else "5"
 
 
 class GithubConfig(Config):

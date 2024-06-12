@@ -1,5 +1,6 @@
 import time
 
+from src.module import Email
 from src.utils.Config import Config
 from src.module.Github import Github
 from src.module.Login import Login
@@ -11,7 +12,7 @@ class LottoBuyer(Login):
         page.locator("#popupLayerAlert").get_by_role("button",
                                                      name="확인").click()
         page.click("text=자동번호발급")
-        page.select_option("select", str(Config.COUNT))
+        page.select_option("select", Config.LOTTO_COUNT)
         page.click("text=확인")
         page.click("input:has-text(\"구매하기\")")
 
@@ -35,12 +36,14 @@ class LottoBuyer(Login):
         balance = page.query_selector("p.total_new > strong")
         table = page.query_selector(
             "table.tbl_data.tbl_data_col > tbody > tr:nth-child(1)")
-        date = table.query_selector("td:nth-child(1)")
-        rnd = table.query_selector("td:nth-child(2)")
+        round_list= {
+            "date": table.query_selector("td:nth-child(1)").inner_text(),
+            "round": table.query_selector("td:nth-child(2)").inner_text()
+        }
 
         if "github" in Config.LOTTO_NOTIFICATIONS:
-            Github.post_buy(rnd, date, balance)
+            Github.post_buy(round_list, balance)
         if "email" in Config.LOTTO_NOTIFICATIONS:
-            pass
+            Email.post_buy(round_list, balance)
 
         self.close()

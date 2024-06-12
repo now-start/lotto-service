@@ -22,14 +22,16 @@ services:
 
 ## Environment
 
-| Key                 | Description                 | Example             |
-|---------------------|-----------------------------|---------------------|
-| LOTTO_ID            | 로또 사이트 아이디                  | your_lotto_id       |
-| LOTTO_PASSWORD      | 로또 사이트 비밀번호                 | your_lotto_password |
-| LOTTO_NOTIFICATIONS | 알림 옵션 (다중 설정 가능 `,` 구분해서 작성 | none, email, github |
-| LOTTO_SCHEDULE      | 로또 스케줄 (m h dom mon dow)    | 0 0 * * 0           |
+| Key                 | Description                  | Example             |
+|---------------------|------------------------------|---------------------|
+| LOTTO_ID            | 로또 사이트 아이디                   | your_lotto_id       |
+| LOTTO_PASSWORD      | 로또 사이트 비밀번호                  | your_lotto_password |
+| LOTTO_COUNT         | 로또 구매 개수                     | 1 ~ 5               |
+| LOTTO_NOTIFICATIONS | 알림 옵션 (다중 설정 가능 `,` 구분해서 작성) | none, email, github |
+| LOTTO_SCHEDULE      | 로또 스케줄 (m h dom mon dow)     | 0 0 * * 0           |
 
 ## Optional
+
 ### NOTIFICATIONS = github
 
 | Key               | Description | Example                                 |
