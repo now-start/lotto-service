@@ -35,12 +35,9 @@ def post_result(round_list, balance):
     message = create_email(subject, body)
     send_email(message)
 
-def post_test():
+if __name__ == "__main__":
     subject = f'테스트 이메일 입니다'
     body = (f'스케줄 : {EmailConfig.LOTTO_SCHEDULE}\n'
             f'로또 구매 횟수 : {EmailConfig.LOTTO_COUNT}')
     message = create_email(subject, body)
     send_email(message)
-
-if __name__ == "__main__":
-    post_test()

@@ -8,11 +8,12 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && \
     pip install --upgrade pip && \
     pip install -r requirements.txt && \
-    python -m playwright install --with-deps chromium
+    python -m playwright install --with-deps
 
 RUN chmod +x /app/start.sh
 
 ENV TZ="Asia/Seoul"
+ENV PYTHONPATH="${PYTHONPATH}:/app/src"
 ENV LOTTO_SCHEDULE="0 0 * * 0"
 ENV LOTTO_COUNT="5"
 ENV LOTTO_NOTIFICATIONS="none"
