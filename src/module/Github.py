@@ -17,7 +17,7 @@ class Github:
     }
     data = {
       'title': f'로또6/45 {round_list["round"]}회차 구매 ⌛',
-      'body': f'구매일: {round_list["date"]}\n잔액: {balance.inner_text()}원'
+      'body': f'구매일: {round_list["date"]}\n잔액: {balance}원'
     }
     Github.post(url, headers, data)
 

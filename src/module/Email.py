@@ -22,7 +22,7 @@ def send_email(message):
 
 def post_buy(round_list, balance):
     subject = f'로또6/45 {round_list["round"]}회차 구매 ⌛'
-    body = f'구매일: {round_list["date"]}\n잔액: {balance.inner_text()}원'
+    body = f'구매일: {round_list["date"]}\n잔액: {balance}원'
     message = create_email(subject, body)
     send_email(message)
 
@@ -31,7 +31,7 @@ def post_result(round_list, balance):
         subject = f'로또6/45 {round_list[0]["round"]}회차 구매 🎉'
     elif round_list[0]["result"] == "낙첨":
         subject = f'로또6/45 {round_list[0]["round"]}회차 구매 ☠️'
-    body = f'구매일: {round_list[0]["date"]}\n잔액: {balance.inner_text()}원\n당첨금: {round_list[0]["reward"]}'
+    body = f'구매일: {round_list[0]["date"]}\n잔액: {balance}원\n당첨금: {round_list[0]["reward"]}'
     message = create_email(subject, body)
     send_email(message)
 
