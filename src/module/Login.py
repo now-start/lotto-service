@@ -5,7 +5,7 @@ from src.utils.Config import Config
 
 class Login:
   def __init__(self):
-    self.playwright = sync_playwright()
+    self.playwright = sync_playwright().start()
     self.browser = self.playwright.chromium.launch(headless=True)
     self.context = self.browser.new_context()
 

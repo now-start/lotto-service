@@ -13,7 +13,7 @@ RUN apt-get update && \
 RUN chmod +x /app/start.sh
 
 ENV TZ="Asia/Seoul"
-ENV PYTHONPATH="${PYTHONPATH}:/app/src"
+ENV PYTHONPATH="${PYTHONPATH}:/app"
 ENV LOTTO_SCHEDULE="0 0 * * 0"
 ENV LOTTO_COUNT="5"
 ENV LOTTO_NOTIFICATIONS="none"
