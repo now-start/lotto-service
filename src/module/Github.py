@@ -38,12 +38,12 @@ class Github:
             if round["result"] == "당첨":
               round = {
                 'title': f'로또6/45 {round["round"]}회차 구매 🎉',
-                'body': f'구매일: {round["date"]}\n잔액: {balance.inner_text()}원\n당첨금: {round["reward"]}',
+                'body': f'구매일: {round["date"]}\n잔액: {balance}원\n당첨금: {round["reward"]}',
               }
             elif round["result"] == "낙첨":
               round = {
                 'title': f'로또6/45 {round["round"]}회차 구매 ☠️',
-                'body': f'구매일: {round["date"]}\n잔액: {balance.inner_text()}원\n당첨금: {round["reward"]}',
+                'body': f'구매일: {round["date"]}\n잔액: {balance}원\n당첨금: {round["reward"]}',
               }
         else:
           round = {

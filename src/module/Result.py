@@ -7,7 +7,7 @@ from src.module.Login import Login
 class LottoResultChecker(Login):
     def check_result(self, page):
         page.goto("https://dhlottery.co.kr/userSsl.do?method=myPage")
-        balance = page.query_selector("p.total_new > strong")
+        balance = page.query_selector("p.total_new > strong").inner_text()
         round_list = []
         for i in range(1, 2):
             table = page.query_selector(

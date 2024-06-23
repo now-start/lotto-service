@@ -33,7 +33,7 @@ class LottoBuyer(Login):
 
         page = self.context.new_page()
         page.goto("https://dhlottery.co.kr/userSsl.do?method=myPage")
-        balance = page.query_selector("p.total_new > strong")
+        balance = page.query_selector("p.total_new > strong").inner_text()
         table = page.query_selector(
             "table.tbl_data.tbl_data_col > tbody > tr:nth-child(1)")
         round_list= {
