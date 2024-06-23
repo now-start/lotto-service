@@ -1,11 +1,11 @@
-from playwright.async_api import async_playwright
+from playwright.sync_api import sync_playwright
 
 from src.utils.Config import Config
 
 
 class Login:
   def __init__(self):
-    self.playwright = async_playwright().start()
+    self.playwright = sync_playwright().start()
     self.browser = self.playwright.chromium.launch(headless=True)
     self.context = self.browser.new_context()
 
