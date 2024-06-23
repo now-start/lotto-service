@@ -30,7 +30,6 @@ class LottoResultChecker(Login):
             raise
         finally:
             self.close()
-            self.playwright.stop()
 
         if "github" in Config.LOTTO_NOTIFICATIONS:
             Github.post_result(round_list, balance)
