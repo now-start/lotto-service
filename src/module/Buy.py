@@ -29,7 +29,7 @@ class LottoBuyer(Login):
             print(f"구매 실패: {e}")
             raise
         finally:
-            page.close()
+            self.close()
 
         page = self.context.new_page()
         page.goto("https://dhlottery.co.kr/userSsl.do?method=myPage")
