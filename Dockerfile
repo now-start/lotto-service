@@ -10,12 +10,12 @@ RUN apt-get update && \
     pip install -r requirements.txt && \
     python -m playwright install --with-deps
 
-RUN chmod +x /app/start.sh
+RUN chmod +x /app/entrypoint.sh
 
 ENV TZ="Asia/Seoul"
 ENV PYTHONPATH="${PYTHONPATH}:/app"
-ENV LOTTO_SCHEDULE="0 0 * * 0"
+ENV LOTTO_SCHEDULE="0 9 * * 0"
 ENV LOTTO_COUNT="5"
 ENV LOTTO_NOTIFICATIONS="none"
 
-CMD ["/bin/sh", "/app/start.sh"]
+ENTRYPOINT ["/bin/sh", "/app/entrypoint.sh"]
