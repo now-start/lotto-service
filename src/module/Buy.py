@@ -27,6 +27,7 @@ class LottoBuyer(Login):
             page.click("input[name=\"closeLayer\"]")
         except Exception as e:
             print(f"구매 실패: {e}")
+            Email.post_error(e)
             raise
 
         page = self.context.new_page()

@@ -25,13 +25,13 @@ class LottoResultChecker(Login):
             page = self.context.new_page()
             self.login(page)
             round_list, balance = self.check_result(page)
+
+            if "github" in Config.LOTTO_NOTIFICATIONS:
+                Github.post_result(round_list, balance)
+            if "email" in Config.LOTTO_NOTIFICATIONS:
+                Email.post_result(round_list, balance)
         except Exception as e:
             print(f"결과 확인 실패: {e}")
-            raise
+            Email.post_error(e)
         finally:
             self.close()
-
-        if "github" in Config.LOTTO_NOTIFICATIONS:
-            Github.post_result(round_list, balance)
-        if "email" in Config.LOTTO_NOTIFICATIONS:
-            Email.post_result(round_list, balance)

@@ -37,6 +37,11 @@ def post_result(round_list, balance):
     message = create_email(subject, body)
     send_email(message)
 
+def post_error(e):
+    subject = f'로또6/45 에러 발생'
+    message = create_email(subject, e)
+    send_email(message)
+
 if __name__ == "__main__":
     subject = f'테스트 이메일 입니다'
     body = (f'스케줄 : {EmailConfig.LOTTO_SCHEDULE}\n'
