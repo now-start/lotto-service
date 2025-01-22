@@ -1,4 +1,4 @@
-package org.nowstart.data.type;
+package org.nowstart.lotto.data.type;
 
 import lombok.Data;
 import lombok.RequiredArgsConstructor;

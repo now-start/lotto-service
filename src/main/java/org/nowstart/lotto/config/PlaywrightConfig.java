@@ -1,4 +1,4 @@
-package org.nowstart.config;
+package org.nowstart.lotto.config;
 
 import org.springframework.context.annotation.Configuration;
 

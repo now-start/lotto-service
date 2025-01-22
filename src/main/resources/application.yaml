@@ -38,3 +38,8 @@ eureka:
 logging:
   file:
     path: ./log
+  charset:
+    file: UTF-8
+
+lotto:
+  email:
