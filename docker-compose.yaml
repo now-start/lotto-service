@@ -1,8 +1,0 @@
-version: '3'
-services:
-  lotto-app:
-    image: ghcr.io/now-start/lotto-service:latest
-    environment:
-      - LOTTO_ID=your_lotto_id
-      - LOTTO_PASSWORD=your_lotto_password
-      - LOTTO_NOTIFICATIONS=none

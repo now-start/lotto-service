@@ -1,0 +1,48 @@
+spring:
+  application:
+    name: lotto
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+management:
+  info:
+    java:
+      enabled: true
+    os:
+      enabled: true
+    process:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${SERVICE_URL:https://spring.nowstart.org/admin/eureka/}
+
+logging:
+  file:
+    path: ./log
+  charset:
+    file: UTF-8
+
+lotto:
+  id: ${LOTTO_ID:}
+  password: ${LOTTO_PASSWORD:}
+  email: ${LOTTO_EMAIL:}
+  count: ${LOTTO_COUNT:5}

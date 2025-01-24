@@ -9,42 +9,27 @@
 docker-compose
 
 ```yaml
-version: '3'
 services:
   lotto-app:
+    user: root
     image: ghcr.io/now-start/lotto-service:latest
     environment:
+      - TZ=Asia/Seoul
+      - MAIL_USERNAME=your_email_id
+      - MAIL_PASSWORD=your_email_password
       - LOTTO_ID=your_lotto_id
       - LOTTO_PASSWORD=your_lotto_password
-      - LOTTO_NOTIFICATIONS=none
+      - LOTTO_EMAIL=your_email
 
 ```
 
 ## Environment
 
-| Key                 | Description                  | Example             |
-|---------------------|------------------------------|---------------------|
-| LOTTO_ID            | 로또 사이트 아이디                   | your_lotto_id       |
-| LOTTO_PASSWORD      | 로또 사이트 비밀번호                  | your_lotto_password |
-| LOTTO_COUNT         | 로또 구매 개수                     | 1 ~ 5               |
-| LOTTO_NOTIFICATIONS | 알림 옵션 (다중 설정 가능 `,` 구분해서 작성) | none, email, github |
-| LOTTO_SCHEDULE      | 로또 스케줄 (m h dom mon dow)     | 0 0 * * 0           |
-
-## Optional
-
-### NOTIFICATIONS = github
-
-| Key               | Description | Example                                 |
-|-------------------|-------------|-----------------------------------------|
-| GITHUB_TOKEN      | 깃허브 토큰      | your_github_token                       |
-| GITHUB_REPOSITORY | 깃허브 저장소     | your_github_user/your_github_repository |
-
-### NOTIFICATIONS = email
-
-| Key                                | Description | Example            |
-|------------------------------------|-------------|--------------------|
-| NOTIFICATION_EMAIL_SERVER          | 이메일 서버 주소   | smtp.gmail.com     |
-| NOTIFICATION_EMAIL_SERVER_PORT     | 이메일 서버 포트   | 587                |
-| NOTIFICATION_EMAIL_SERVER_PASSWORD | 이메일 서버 비밀번호 | your_email_address |
-| NOTIFICATION_EMAIL_TO              | 받는 사람       | email_address      |
-| NOTIFICATION_EMAIL_FROM            | 보낸 사람       | your_email_address |
+| Key            | Description   | Example             |
+|----------------|---------------|---------------------|
+| MAIL_USERNAME       | SMTP 이메일 아이디  | your_email_id       |
+| MAIL_PASSWORD | SMTP 이메일 비밀번호 | your_email_password |
+| LOTTO_ID       | 로또 사이트 아이디    | your_lotto_id       |
+| LOTTO_PASSWORD | 로또 사이트 비밀번호   | your_lotto_password |
+| LOTTO_EMAIL    | 로또 결과 확인 이메일  | your_email          |
+| LOTTO_COUNT    | 로또 구매 개수      | 1 ~ 5               |
