@@ -42,4 +42,7 @@ logging:
     file: UTF-8
 
 lotto:
-  email:
+  id: ${LOTTO_ID:}
+  password: ${LOTTO_PASSWORD:}
+  email: ${LOTTO_EMAIL:}
+  count: ${LOTTO_COUNT:5}

@@ -17,7 +17,7 @@ public class PlaywrightConfig {
 
     @Bean
     public Browser browser(Playwright playwright) {
-        return playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(false));
+        return playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
     }
 
     @Bean
