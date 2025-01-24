@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.nowstart.lotto.data.dto.LottoUserDto;
 import org.nowstart.lotto.data.dto.MessageDto;
-import org.nowstart.lotto.scheduler.BuyScheduler;
 import org.nowstart.lotto.service.GoogleNotifyService;
 import org.nowstart.lotto.service.LottoService;
 import org.springframework.boot.CommandLineRunner;
@@ -27,6 +26,7 @@ public class LottoServiceApplication implements CommandLineRunner {
 
 	@Override
 	public void run(String... args) throws Exception {
+		log.info("[run][LottoInit]");
 		LottoUserDto lottoUserDto = lottoService.loginLotto();
 		googleNotifyService.send(MessageDto.builder()
 			.subject("⏳Lotto Init Test⏳")
