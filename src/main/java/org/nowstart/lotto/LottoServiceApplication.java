@@ -20,7 +20,6 @@ public class LottoServiceApplication implements CommandLineRunner {
 
 	private final GoogleNotifyService googleNotifyService;
 	private final LottoService lottoService;
-	private final BuyScheduler scheduler;
 
 	public static void main(String[] args) {
 		SpringApplication.run(LottoServiceApplication.class, args);
@@ -28,12 +27,10 @@ public class LottoServiceApplication implements CommandLineRunner {
 
 	@Override
 	public void run(String... args) throws Exception {
-//		LottoUserDto lottoUserDto = lottoService.loginLotto();
-//		googleNotifyService.send(MessageDto.builder()
-//			.subject("로또 로그인 테스트")
-//			.text(lottoUserDto.toString())
-//			.build());
-
-		scheduler.buyScheduler();
+		LottoUserDto lottoUserDto = lottoService.loginLotto();
+		googleNotifyService.send(MessageDto.builder()
+			.subject("⏳Lotto Init Test⏳")
+			.text(lottoUserDto.toString())
+			.build());
 	}
 }
