@@ -22,7 +22,7 @@ public class PlaywrightConfig {
 
     @Bean
     public Page page(Browser browser) {
-        return browser.newPage(new Browser.NewPageOptions().setLocale("ko-KR"));
+        return browser.newPage(new Browser.NewPageOptions());
     }
 }
 
