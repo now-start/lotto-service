@@ -4,9 +4,6 @@ import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
-
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -25,8 +22,7 @@ public class PlaywrightConfig {
 
     @Bean
     public Page page(Browser browser) {
-        return browser.newPage(new Browser.NewPageOptions()
-                .setRecordVideoDir(Paths.get("video/")));
+        return browser.newPage(new Browser.NewPageOptions());
     }
 }
 

@@ -22,7 +22,7 @@ public class Scheduler {
     private final LottoService lottoService;
     private final GoogleNotifyService googleNotifyService;
 
-    @Scheduled(cron = "0 20 0 * * 0")
+    @Scheduled(cron = "0 21 0 * * 6")
     public void checkScheduler() throws MessagingException, UnsupportedEncodingException {
         executeLottoTask("⚠️로또 확인 실패⚠️", false);
     }
