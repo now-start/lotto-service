@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'org.nowstart'
-version = 'v4.0.5'
+version = 'v4.0.6'
 
 springBoot {
 	buildInfo()

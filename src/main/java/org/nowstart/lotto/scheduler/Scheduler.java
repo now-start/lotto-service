@@ -17,12 +17,12 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class BuyScheduler {
+public class Scheduler {
 
     private final LottoService lottoService;
     private final GoogleNotifyService googleNotifyService;
 
-    @Scheduled(cron = "0 0 21 * * 6")
+    @Scheduled(cron = "0 10 0 * * 0")
     public void checkScheduler() throws MessagingException, UnsupportedEncodingException {
         executeLottoTask("⚠️로또 확인 실패⚠️", false);
     }
