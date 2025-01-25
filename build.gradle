@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'org.nowstart'
-version = 'v4.0.3'
+version = 'v4.0.4'
 
 springBoot {
 	buildInfo()
@@ -57,5 +57,5 @@ tasks.named('test') {
 }
 
 bootBuildImage {
-	runImage = 'mcr.microsoft.com/playwright/java:v1.49.0-amd64'
+	runImage = 'mcr.microsoft.com/playwright/java:v1.49.0'
 }

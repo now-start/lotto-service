@@ -1,0 +1,11 @@
+services:
+  phantom2691:
+    user: root
+    image: lotto-service:v4.0.3
+    environment:
+      - TZ=Asia/Seoul
+      - MAIL_USERNAME=
+      - MAIL_PASSWORD=
+      - LOTTO_ID=
+      - LOTTO_PASSWORD=
+      - LOTTO_EMAIL=

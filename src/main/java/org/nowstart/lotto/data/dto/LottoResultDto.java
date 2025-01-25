@@ -16,7 +16,7 @@ public class LottoResultDto {
     String price;
 
     public String toString() {
-        return MessageType.of(result).getEmoji() + name + round + "회차 " + MessageType.of(result).getEmoji();
+        return MessageType.of(result).getEmoji() + name + " " + round + "회차" + MessageType.of(result).getEmoji();
     }
 }
 

@@ -32,10 +32,12 @@ public class LottoService {
     public LottoUserDto loginLotto() {
         page.navigate("https://dhlottery.co.kr/user.do?method=login");
 
-        page.locator("#userId").fill(lottoId);
-        page.locator("#article > div:nth-child(2) > div > form > div > div.inner > fieldset > div.form > input[type=password]:nth-child(2)").fill(lottoPassword);
-        page.locator("#article > div:nth-child(2) > div > form > div > div.inner > fieldset > div.form > a").click();
+        page.getByPlaceholder("아이디").fill(lottoId);
+        page.getByPlaceholder("비밀번호").fill(lottoPassword);
+        page.getByRole(AriaRole.GROUP, new Page.GetByRoleOptions().setName("LOGIN")).getByRole(AriaRole.LINK, new Locator.GetByRoleOptions().setName("로그인")).click();
 
+        // 로그인 후 모바일 화면으로 전환되는 문제 있음
+        page.navigate("https://dhlottery.co.kr/common.do?method=main");
         Locator information = page.locator("ul.information");
 
         return LottoUserDto.builder()
