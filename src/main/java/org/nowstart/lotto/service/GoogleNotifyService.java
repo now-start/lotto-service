@@ -2,7 +2,9 @@ package org.nowstart.lotto.service;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.InternetAddress;
+
 import java.io.UnsupportedEncodingException;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.nowstart.lotto.data.dto.MessageDto;
@@ -25,10 +27,11 @@ public class GoogleNotifyService {
     private final JavaMailSender javaMailSender;
 
     /**
-     * Send email
+     * 이매일 전송
      *
-     * @param message
-     * @throws MessagingException
+     * @param message message
+     * @throws MessagingException MessagingException
+     * @throws UnsupportedEncodingException UnsupportedEncodingException
      */
     public void send(MessageDto message) throws MessagingException, UnsupportedEncodingException {
         MimeMessageHelper helper = new MimeMessageHelper(javaMailSender.createMimeMessage(), true, "UTF-8");

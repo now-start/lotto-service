@@ -92,6 +92,5 @@ public class LottoService {
         page.getByRole(AriaRole.COMBOBOX, new Page.GetByRoleOptions().setName("적용수량")).selectOption(lottoCount);
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("확인")).click();
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("구매하기")).click();
-        page.locator("#popupLayerConfirm").getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("확인")).click();
     }
 }
