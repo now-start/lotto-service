@@ -1,7 +1,9 @@
 package org.nowstart.lotto;
 
+import com.microsoft.playwright.Browser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.nowstart.lotto.data.dto.PageDto;
 import org.nowstart.lotto.data.dto.LottoUserDto;
 import org.nowstart.lotto.data.dto.MessageDto;
 import org.nowstart.lotto.service.GoogleNotifyService;
@@ -19,20 +21,23 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @RequiredArgsConstructor
 public class LottoServiceApplication implements CommandLineRunner {
 
-	private final GoogleNotifyService googleNotifyService;
-	private final LottoService lottoService;
+    private final Browser browser;
+    private final GoogleNotifyService googleNotifyService;
+    private final LottoService lottoService;
 
-	public static void main(String[] args) {
-		SpringApplication.run(LottoServiceApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(LottoServiceApplication.class, args);
+    }
 
-	@Override
-	public void run(String... args) throws Exception {
-		log.info("[run][LottoInit]");
-		LottoUserDto lottoUserDto = lottoService.loginLotto();
-		googleNotifyService.send(MessageDto.builder()
-			.subject("⏳Lotto Init Test⏳")
-			.text(lottoUserDto.toString())
-			.build());
-	}
+    @Override
+    public void run(String... args) throws Exception {
+        try (PageDto pageDto = new PageDto(browser)) {
+            log.info("[run][LottoInit]");
+            LottoUserDto lottoUserDto = lottoService.loginLotto(pageDto);
+            googleNotifyService.send(MessageDto.builder()
+                    .subject("⏳Lotto Init Test⏳")
+                    .text(lottoUserDto.toString())
+                    .build());
+        }
+    }
 }

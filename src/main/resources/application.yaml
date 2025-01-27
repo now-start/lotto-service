@@ -5,8 +5,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: ${MAIL_USERNAME:}
-    password: ${MAIL_PASSWORD:}
+    username: ${MAIL_USERNAME:nowstart.org}
+    password: ${MAIL_PASSWORD:tokfmndfkkxqnzlf}
     properties:
       mail:
         smtp:
@@ -42,10 +42,10 @@ logging:
     file: UTF-8
 
 lotto:
-  id: ${LOTTO_ID:}
-  password: ${LOTTO_PASSWORD:}
-  email: ${LOTTO_EMAIL:}
+  id: ${LOTTO_ID:phantom2691}
+  password: ${LOTTO_PASSWORD:@tjdgh2691}
+  email: ${LOTTO_EMAIL:phantom2691@naver.com}
   count: ${LOTTO_COUNT:5}
   cron:
-    check: ${LOTTO_CRON_CHECK:0 21 0 * * 6}
+    check: ${LOTTO_CRON_CHECK:0 38 3 * * *}
     buy: ${LOTTO_CRON_BUY:0 0 9 * * 0}

@@ -1,13 +1,13 @@
 package org.nowstart.lotto.service;
 
-import com.microsoft.playwright.Locator;
-import com.microsoft.playwright.Page;
+import com.microsoft.playwright.*;
 import com.microsoft.playwright.options.AriaRole;
 
 import java.util.List;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.nowstart.lotto.data.dto.PageDto;
 import org.nowstart.lotto.data.dto.LottoResultDto;
 import org.nowstart.lotto.data.dto.LottoUserDto;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,14 +25,12 @@ public class LottoService {
     private String lottoPassword;
     @Value("${lotto.count}")
     private String lottoCount;
-    private final Page page;
 
     /**
      * 로또 로그인
-     *
-     * @return LottoUserDto
      */
-    public LottoUserDto loginLotto() {
+    public LottoUserDto loginLotto(PageDto pageDto) {
+        Page page = pageDto.getPage();
         page.navigate("https://dhlottery.co.kr/user.do?method=login");
 
         if (page.getByPlaceholder("아이디").count() > 0) {
@@ -41,7 +39,7 @@ public class LottoService {
             page.getByRole(AriaRole.GROUP, new Page.GetByRoleOptions().setName("LOGIN")).getByRole(AriaRole.LINK, new Locator.GetByRoleOptions().setName("로그인")).click();
         }
 
-        // 로그인 후 모바일 화면으로 전환되는 문제 있음
+        // 메인 페이지로 이동 (리다이렉션 문제 대응)
         page.navigate("https://dhlottery.co.kr/common.do?method=main");
         Locator information = page.locator("ul.information");
 
@@ -53,10 +51,9 @@ public class LottoService {
 
     /**
      * 로또 당첨 확인
-     *
-     * @return List<LottoResultDto>
      */
-    public List<LottoResultDto> checkLotto() {
+    public List<LottoResultDto> checkLotto(PageDto pageDto) {
+        Page page = pageDto.getPage();
         page.navigate("https://dhlottery.co.kr/userSsl.do?method=myPage");
 
         Locator table = page.locator("#article > div:nth-child(2) > div > div:nth-child(2) > table > tbody > tr");
@@ -74,19 +71,19 @@ public class LottoService {
 
     /**
      * 로또 상세 확인
-     *
-     * @param lottoResultDto LottoResultDto
-     * @return ByteArrayResource
      */
-    public ByteArrayResource detailLotto(LottoResultDto lottoResultDto) {
+    public ByteArrayResource detailLotto(PageDto pageDto, LottoResultDto lottoResultDto) {
+        Page page = pageDto.getPage();
         page.navigate("https://dhlottery.co.kr/myPage.do?method=lotto645Detail&orderNo=0000000000000000&barcode=" + lottoResultDto.getNumber() + "&issueNo=1");
+
         return new ByteArrayResource(page.screenshot());
     }
 
     /**
      * 로또 구매
      */
-    public void buyLotto() {
+    public void buyLotto(PageDto pageDto) {
+        Page page = pageDto.getPage();
         page.navigate("https://ol.dhlottery.co.kr/olotto/game/game645.do");
         page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("자동번호발급 구매 수량 전체를 자동번호로 발급 받을 수 있습니다.")).click();
         page.getByRole(AriaRole.COMBOBOX, new Page.GetByRoleOptions().setName("적용수량")).selectOption(lottoCount);
