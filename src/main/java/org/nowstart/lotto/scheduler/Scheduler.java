@@ -22,12 +22,12 @@ public class Scheduler {
     private final LottoService lottoService;
     private final GoogleNotifyService googleNotifyService;
 
-    @Scheduled(cron = "0 21 0 * * 6")
+    @Scheduled(cron = "${lotto.cron.check}")
     public void checkScheduler() throws MessagingException, UnsupportedEncodingException {
         executeLottoTask("⚠️로또 확인 실패⚠️", false);
     }
 
-    @Scheduled(cron = "0 0 9 * * 0")
+    @Scheduled(cron = "${lotto.cron.buy}")
     public void buyScheduler() throws MessagingException, UnsupportedEncodingException {
         executeLottoTask("⚠️로또 구매 실패⚠️", true);
     }
