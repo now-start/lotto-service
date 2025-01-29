@@ -47,5 +47,5 @@ lotto:
   email: ${LOTTO_EMAIL:phantom2691@naver.com}
   count: ${LOTTO_COUNT:5}
   cron:
-    check: ${LOTTO_CRON_CHECK:0 38 3 * * *}
+    check: ${LOTTO_CRON_CHECK:0 0 21 * * 6}
     buy: ${LOTTO_CRON_BUY:0 0 9 * * 0}

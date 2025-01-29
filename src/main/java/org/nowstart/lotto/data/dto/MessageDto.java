@@ -20,6 +20,6 @@ public class MessageDto {
     String imageText = "<img src='cid:lottoImage'/>";
 
     public String getImageText(){
-        return text + "\n" + imageText;
+        return text + "\n\n" + imageText;
     }
 }
