@@ -42,10 +42,11 @@ logging:
     file: UTF-8
 
 lotto:
+  init: ${LOTTO_INIT:false}
   id: ${LOTTO_ID:}
   password: ${LOTTO_PASSWORD:}
   email: ${LOTTO_EMAIL:}
   count: ${LOTTO_COUNT:5}
   cron:
-    check: ${LOTTO_CRON_CHECK:0 21 0 * * 6}
+    check: ${LOTTO_CRON_CHECK:0 0 22 * * 6}
     buy: ${LOTTO_CRON_BUY:0 0 9 * * 0}

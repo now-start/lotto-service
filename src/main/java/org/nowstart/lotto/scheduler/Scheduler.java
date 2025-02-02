@@ -1,10 +1,12 @@
 package org.nowstart.lotto.scheduler;
 
+import com.microsoft.playwright.Browser;
 import jakarta.mail.MessagingException;
 import java.io.UnsupportedEncodingException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.nowstart.lotto.data.dto.PageDto;
 import org.nowstart.lotto.data.dto.LottoResultDto;
 import org.nowstart.lotto.data.dto.LottoUserDto;
 import org.nowstart.lotto.data.dto.MessageDto;
@@ -19,6 +21,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class Scheduler {
 
+    private final Browser browser;
     private final LottoService lottoService;
     private final GoogleNotifyService googleNotifyService;
 
@@ -33,24 +36,24 @@ public class Scheduler {
     }
 
     private void executeLottoTask(String failureSubject, boolean buyLotto) throws MessagingException, UnsupportedEncodingException {
-        try {
+        try (PageDto pageDto = new PageDto(browser)) {
             log.info("[executeLottoTask][loginLotto]");
-            LottoUserDto lottoUserDto = lottoService.loginLotto();
+            LottoUserDto lottoUserDto = lottoService.loginLotto(pageDto);
 
             if (buyLotto) {
                 log.info("[executeLottoTask][buyLotto]");
-                lottoService.buyLotto();
+                lottoService.buyLotto(pageDto);
             }
 
             log.info("[executeLottoTask][checkLotto]");
-            List<LottoResultDto> lottoResultDtoList = lottoService.checkLotto();
+            List<LottoResultDto> lottoResultDtoList = lottoService.checkLotto(pageDto);
             if (!lottoResultDtoList.isEmpty()) {
                 LottoResultDto lottoResultDto = lottoResultDtoList.get(0);
                 if (buyLotto == MessageType.WAITE.getText().equals(lottoResultDto.getResult())) {
                     googleNotifyService.send(MessageDto.builder()
                         .subject(lottoResultDto.toString())
                         .text(lottoUserDto.toString())
-                        .lottoImage(lottoService.detailLotto(lottoResultDto))
+                        .lottoImage(lottoService.detailLotto(pageDto, lottoResultDto))
                         .build());
                 } else {
                     throw new IllegalArgumentException();
