@@ -1,27 +1,19 @@
-spring:
-  application:
-    name: lotto
+server:
+  port: 8080
+  shutdown: graceful
+  forward-headers-strategy: framework
 
-  mail:
-    host: smtp.gmail.com
-    port: 587
-    username: ${MAIL_USERNAME:}
-    password: ${MAIL_PASSWORD:}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
+eureka:
+  instance:
+    metadata-map:
+      management.port: ${management.server.port}
+  client:
+    service-url:
+      defaultZone: ${SERVICE_URL:https://spring.nowstart.org/admin/eureka/}
 
 management:
-  info:
-    java:
-      enabled: true
-    os:
-      enabled: true
-    process:
-      enabled: true
+  server:
+    port: 8081
   endpoints:
     web:
       exposure:
@@ -29,24 +21,16 @@ management:
   endpoint:
     health:
       show-details: always
-
-eureka:
-  client:
-    service-url:
-      defaultZone: ${SERVICE_URL:https://spring.nowstart.org/admin/eureka/}
+  info:
+    os:
+      enabled: true
+    java:
+      enabled: true
+    process:
+      enabled: true
 
 logging:
   file:
-    path: ./log
+    path: ./logs
   charset:
     file: UTF-8
-
-lotto:
-  init: ${LOTTO_INIT:false}
-  id: ${LOTTO_ID:}
-  password: ${LOTTO_PASSWORD:}
-  email: ${LOTTO_EMAIL:}
-  count: ${LOTTO_COUNT:5}
-  cron:
-    check: ${LOTTO_CRON_CHECK:0 0 22 * * 6}
-    buy: ${LOTTO_CRON_BUY:0 0 9 * * 0}

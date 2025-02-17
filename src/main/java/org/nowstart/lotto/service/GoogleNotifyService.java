@@ -1,10 +1,7 @@
 package org.nowstart.lotto.service;
 
 import jakarta.mail.MessagingException;
-import jakarta.mail.internet.InternetAddress;
-
 import java.io.UnsupportedEncodingException;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.nowstart.lotto.data.dto.MessageDto;
@@ -12,8 +9,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
-
-import static jakarta.ws.rs.core.HttpHeaders.CONTENT_ID;
 
 @Slf4j
 @Service

@@ -17,14 +17,13 @@ jobs:
 
       - name: Get project version
         run: |
-          echo "VERSION=$(awk -F'=' '/^version/ {gsub(/["'\''"]/, "", $2); print $2}' build.gradle | xargs)" >> $GITHUB_ENV
+          echo "VERSION=v$(awk -F'=' '/^version/ {gsub(/["'\''"]/, "", $2); print $2}' build.gradle | xargs)" >> $GITHUB_ENV
 
       - name: Check if version tag exists remotely
         run: |
-          VERSION=${{ env.VERSION }}
-          echo "Checking if tag $VERSION exists in remote repository..."
-          if git ls-remote --tags origin "refs/tags/$VERSION" | grep -q "$VERSION"; then
-            echo "Version $VERSION already exists. Skipping build and tag."
+          echo "Checking if tag ${{ env.VERSION }} exists in remote repository..."
+          if git ls-remote --tags origin "refs/tags/${{ env.VERSION }}" | grep -q "${{ env.VERSION }}"; then
+            echo "Version ${{ env.VERSION }} already exists. Skipping build and tag."
             echo "TAG_EXISTS=true" >> $GITHUB_ENV
           else
             echo "Version does not exist. Proceeding with build and tag."
@@ -64,8 +63,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          VERSION=${{ needs.check.outputs.VERSION }}
-          ./gradlew bootBuildImage --imageName ghcr.io/${{ github.repository }}:$VERSION
+          ./gradlew bootBuildImage --imageName ghcr.io/${{ github.repository }}:${{ needs.check.outputs.VERSION }}
 
       - name: Tag Docker image with latest
         run: docker tag ghcr.io/${{ github.repository }}:${{ needs.check.outputs.VERSION }} ghcr.io/${{ github.repository }}:latest
