@@ -1,36 +1,5 @@
-server:
-  port: 8080
-  shutdown: graceful
-  forward-headers-strategy: framework
-
-eureka:
-  instance:
-    metadata-map:
-      management.port: ${management.server.port}
-  client:
-    service-url:
-      defaultZone: ${SERVICE_URL:https://spring.nowstart.org/admin/eureka/}
-
-management:
-  server:
-    port: 8081
-  endpoints:
-    web:
-      exposure:
-        include: "*"
-  endpoint:
-    health:
-      show-details: always
-  info:
-    os:
-      enabled: true
-    java:
-      enabled: true
-    process:
-      enabled: true
-
-logging:
-  file:
-    path: ./logs
-  charset:
-    file: UTF-8
+spring:
+  application:
+    name: lotto
+  config:
+    import: ${SPRING_CONFIG_IMPORT:configserver:https://spring.nowstart.org/config}
