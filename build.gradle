@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'org.nowstart'
-version = '5.0.3'
+version = '5.1.0'
 
 springBoot {
 	buildInfo()
@@ -33,6 +33,7 @@ ext {
 }
 
 dependencies {
+	implementation 'org.jolokia:jolokia-support-spring:2.2.9'
 	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'com.microsoft.playwright:playwright:1.49.0'
