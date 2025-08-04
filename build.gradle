@@ -7,7 +7,7 @@ plugins {
 }
 
 group = 'org.nowstart'
-version = '5.3.0'
+version = '5.3.1'
 
 springBoot {
 	buildInfo()
@@ -37,7 +37,7 @@ dependencies {
 	implementation 'org.jolokia:jolokia-support-spring:2.2.9'
 	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
-	implementation 'com.microsoft.playwright:playwright:1.49.0'
+	implementation 'com.microsoft.playwright:playwright:1.53.0'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-mail'
 	implementation 'org.springframework.cloud:spring-cloud-starter-config'
@@ -60,5 +60,5 @@ tasks.named('test') {
 }
 
 bootBuildImage {
-	runImage = 'mcr.microsoft.com/playwright/java:v1.49.0'
+	runImage = 'mcr.microsoft.com/playwright/java:v1.53.0'
 }

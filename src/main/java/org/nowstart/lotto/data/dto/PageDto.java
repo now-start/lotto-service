@@ -27,7 +27,7 @@ public class PageDto implements AutoCloseable {
 
     @Override
     public void close() {
-        context.tracing().stop(new Tracing.StopOptions().setPath(Paths.get("./log/trace.zip")));
+        context.tracing().stop(new Tracing.StopOptions().setPath(Paths.get("./logs/trace.zip")));
         context.close();
         page.close();
     }
