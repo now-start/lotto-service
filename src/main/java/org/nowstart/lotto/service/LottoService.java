@@ -3,6 +3,7 @@ package org.nowstart.lotto.service;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.AriaRole;
+import com.microsoft.playwright.options.LoadState;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +33,7 @@ public class LottoService {
         Page page = pageDto.getPage();
         page.navigate("https://dhlottery.co.kr/user.do?method=login");
 
-        if (page.getByPlaceholder("아이디").count() > 0) {
+        if (page.getByPlaceholder("아이디").isVisible()) {
             page.getByPlaceholder("아이디").fill(lottoId);
             page.getByPlaceholder("비밀번호").fill(lottoPassword);
             page.getByRole(AriaRole.GROUP, new Page.GetByRoleOptions().setName("LOGIN")).getByRole(AriaRole.LINK, new Locator.GetByRoleOptions().setName("로그인")).click();
@@ -44,6 +45,7 @@ public class LottoService {
         }
 
         // 메인 페이지로 이동 (리다이렉션 문제 대응)
+        page.waitForLoadState(LoadState.NETWORKIDLE);
         page.navigate("https://dhlottery.co.kr/common.do?method=main");
         Locator information = page.locator("ul.information");
 
