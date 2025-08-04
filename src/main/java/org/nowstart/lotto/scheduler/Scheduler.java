@@ -10,7 +10,6 @@ import org.nowstart.lotto.data.dto.LottoResultDto;
 import org.nowstart.lotto.data.dto.LottoUserDto;
 import org.nowstart.lotto.data.dto.MessageDto;
 import org.nowstart.lotto.data.dto.PageDto;
-import org.nowstart.lotto.data.type.MessageType;
 import org.nowstart.lotto.service.GoogleNotifyService;
 import org.nowstart.lotto.service.LottoService;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -54,15 +53,11 @@ public class Scheduler {
             List<LottoResultDto> lottoResultDtoList = lottoService.checkLotto(pageDto);
             if (!lottoResultDtoList.isEmpty()) {
                 LottoResultDto lottoResultDto = lottoResultDtoList.get(0);
-                if (buyLotto == MessageType.WAITE.getText().equals(lottoResultDto.getResult())) {
-                    googleNotifyService.send(MessageDto.builder()
+                googleNotifyService.send(MessageDto.builder()
                         .subject(lottoResultDto.toString())
                         .text(lottoUserDto.toString())
                         .lottoImage(lottoService.detailLotto(pageDto, lottoResultDto))
                         .build());
-                } else {
-                    throw new IllegalArgumentException();
-                }
             }
         } catch (Exception e) {
             log.error("[executeLottoTask][Exception]", e);
