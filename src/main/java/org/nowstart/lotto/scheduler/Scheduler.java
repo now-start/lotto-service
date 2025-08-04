@@ -6,18 +6,21 @@ import java.io.UnsupportedEncodingException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.nowstart.lotto.data.dto.PageDto;
 import org.nowstart.lotto.data.dto.LottoResultDto;
 import org.nowstart.lotto.data.dto.LottoUserDto;
 import org.nowstart.lotto.data.dto.MessageDto;
+import org.nowstart.lotto.data.dto.PageDto;
 import org.nowstart.lotto.data.type.MessageType;
 import org.nowstart.lotto.service.GoogleNotifyService;
 import org.nowstart.lotto.service.LottoService;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
 @Component
+@RestController
 @RequiredArgsConstructor
 public class Scheduler {
 
@@ -25,11 +28,13 @@ public class Scheduler {
     private final LottoService lottoService;
     private final GoogleNotifyService googleNotifyService;
 
+    @GetMapping("/check")
     @Scheduled(cron = "${lotto.cron.check}")
     public void checkScheduler() throws MessagingException, UnsupportedEncodingException {
         executeLottoTask("⚠️로또 확인 실패⚠️", false);
     }
 
+    @GetMapping("/buy")
     @Scheduled(cron = "${lotto.cron.buy}")
     public void buyScheduler() throws MessagingException, UnsupportedEncodingException {
         executeLottoTask("⚠️로또 구매 실패⚠️", true);

@@ -1,15 +1,14 @@
 package org.nowstart.lotto.service;
 
-import com.microsoft.playwright.*;
+import com.microsoft.playwright.Locator;
+import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.AriaRole;
-
 import java.util.List;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.nowstart.lotto.data.dto.PageDto;
 import org.nowstart.lotto.data.dto.LottoResultDto;
 import org.nowstart.lotto.data.dto.LottoUserDto;
+import org.nowstart.lotto.data.dto.PageDto;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
@@ -37,6 +36,11 @@ public class LottoService {
             page.getByPlaceholder("아이디").fill(lottoId);
             page.getByPlaceholder("비밀번호").fill(lottoPassword);
             page.getByRole(AriaRole.GROUP, new Page.GetByRoleOptions().setName("LOGIN")).getByRole(AriaRole.LINK, new Locator.GetByRoleOptions().setName("로그인")).click();
+        }
+
+        // 비밀번호 변경 안내
+        if (page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("다음에 변경")).isVisible()) {
+            page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("다음에 변경")).click();
         }
 
         // 메인 페이지로 이동 (리다이렉션 문제 대응)

@@ -1,10 +1,11 @@
 package org.nowstart.lotto.data.dto;
 
-import com.microsoft.playwright.*;
-import lombok.Data;
-
+import com.microsoft.playwright.Browser;
+import com.microsoft.playwright.BrowserContext;
+import com.microsoft.playwright.Page;
+import com.microsoft.playwright.Tracing;
 import java.nio.file.Paths;
-import java.time.LocalDate;
+import lombok.Data;
 
 @Data
 public class PageDto implements AutoCloseable {
@@ -26,7 +27,7 @@ public class PageDto implements AutoCloseable {
 
     @Override
     public void close() {
-        context.tracing().stop(new Tracing.StopOptions().setPath(Paths.get("log/trace.zip")));
+        context.tracing().stop(new Tracing.StopOptions().setPath(Paths.get("./log/trace.zip")));
         context.close();
         page.close();
     }
