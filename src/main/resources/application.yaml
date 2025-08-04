@@ -2,4 +2,26 @@ spring:
   application:
     name: lotto
   config:
-    import: ${SPRING_CONFIG_IMPORT:configserver:https://spring.nowstart.org/config}
+    import: ${SPRING_CONFIG_IMPORT:optional:configserver:https://spring.nowstart.org/config}
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: 'nowstart.org'
+    password: '446fd2e6ed1097c56bcdedf55665b6bbd2fe5be317772dfbfe4ebc8c85b93276'
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+lotto:
+  init: ${LOTTO_INIT:false}
+  id: ${LOTTO_ID:phantom2691}
+  password: ${LOTTO_PASSWORD:@tjdgh2691}
+  email: ${LOTTO_EMAIL:}
+  count: ${LOTTO_COUNT:5}
+  cron:
+    check: ${LOTTO_CRON_CHECK:0 0 22 * * 6}
+    buy: ${LOTTO_CRON_BUY:0 0 9 * * 0}
