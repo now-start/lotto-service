@@ -63,7 +63,7 @@ public class Scheduler {
             log.error("[executeLottoTask][Exception]", e);
             googleNotifyService.send(MessageDto.builder()
                 .subject(failureSubject)
-                .text("자세한 내용은 로그를 확인해 주세요.")
+                .text("자세한 내용은 로그를 확인해 주세요.\n\n" + e.getMessage())
                 .build());
         }
     }

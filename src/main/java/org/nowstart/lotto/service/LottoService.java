@@ -62,7 +62,7 @@ public class LottoService {
         Page page = pageDto.getPage();
         page.navigate("https://dhlottery.co.kr/userSsl.do?method=myPage");
 
-        Locator table = page.locator("#article > div:nth-child(2) > div > div:nth-child(2) > table > tbody > tr");
+        Locator table = page.locator("#article > div:nth-child(2) > div > div:nth-child(2) > table:nth-child(2) > tbody > tr");
 
         return table.all().stream().map(row -> LottoResultDto.builder()
                 .date(row.locator("td:nth-child(1)").innerText())
