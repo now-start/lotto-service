@@ -1,24 +1,22 @@
 package org.nowstart.lotto.service;
 
 import jakarta.mail.MessagingException;
-import java.io.UnsupportedEncodingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.nowstart.lotto.data.dto.MessageDto;
-import org.springframework.beans.factory.annotation.Value;
+import org.nowstart.lotto.data.properties.LottoProperties;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+
+import java.io.UnsupportedEncodingException;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class GoogleNotifyService {
 
-    @Value("${spring.mail.username}")
-    private String fromEmail;
-    @Value("${lotto.email}")
-    private String toEmail;
+    private final LottoProperties lottoProperties;
     private final JavaMailSender javaMailSender;
 
     /**
@@ -31,8 +29,8 @@ public class GoogleNotifyService {
     public void send(MessageDto message) throws MessagingException, UnsupportedEncodingException {
         MimeMessageHelper helper = new MimeMessageHelper(javaMailSender.createMimeMessage(), true, "UTF-8");
 
-        helper.setFrom(fromEmail, "Lotto");
-        helper.setTo(toEmail);
+        helper.setFrom(lottoProperties.getFromEmail(), "Lotto");
+        helper.setTo(lottoProperties.getEmail());
         helper.setSubject(message.getSubject());
         helper.setText(message.getText());
         if (message.getLottoImage() != null) {
