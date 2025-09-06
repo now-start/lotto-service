@@ -29,7 +29,6 @@ public class GoogleNotifyService {
     public void send(MessageDto message) throws MessagingException, UnsupportedEncodingException {
         MimeMessageHelper helper = new MimeMessageHelper(javaMailSender.createMimeMessage(), true, "UTF-8");
 
-        helper.setFrom(lottoProperties.getFromEmail(), "Lotto");
         helper.setTo(lottoProperties.getEmail());
         helper.setSubject(message.getSubject());
         helper.setText(message.getText());
