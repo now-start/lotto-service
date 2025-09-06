@@ -17,6 +17,7 @@ import java.io.UnsupportedEncodingException;
 public class GoogleNotifyService {
 
     private final LottoProperties lottoProperties;
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     private final JavaMailSender javaMailSender;
 
     /**
