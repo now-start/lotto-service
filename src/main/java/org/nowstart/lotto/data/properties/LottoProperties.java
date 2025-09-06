@@ -28,6 +28,17 @@ public class LottoProperties {
 
     @NotNull(message = "초기화 여부는 필수입니다")
     private Boolean init = false;
+
+    @Min(value = 1, message = "재시도 횟수는 최소 1회여야 합니다")
+    @Max(value = 10, message = "재시도 횟수는 최대 10회까지 가능합니다")
+    @NotNull(message = "재시도 횟수는 필수입니다")
+    private Integer maxRetries = 3;
+
+    @Min(value = 1000, message = "재시도 지연 시간은 최소 1초여야 합니다")
+    @Max(value = 30000, message = "재시도 지연 시간은 최대 30초까지 가능합니다")
+    @NotNull(message = "재시도 지연 시간은 필수입니다")
+    private Integer retryDelayMs = 2000;
+
     @Valid
     @NotNull(message = "크론 설정은 필수입니다")
     private Cron cron = new Cron();

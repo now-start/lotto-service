@@ -20,13 +20,6 @@ public class GoogleNotifyService {
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     private final JavaMailSender javaMailSender;
 
-    /**
-     * 이매일 전송
-     *
-     * @param message message
-     * @throws MessagingException MessagingException
-     * @throws UnsupportedEncodingException UnsupportedEncodingException
-     */
     public void send(MessageDto message) throws MessagingException, UnsupportedEncodingException {
         try {
             MimeMessageHelper helper = new MimeMessageHelper(javaMailSender.createMimeMessage(), true, "UTF-8");
