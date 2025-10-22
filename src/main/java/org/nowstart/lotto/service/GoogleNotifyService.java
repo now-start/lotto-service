@@ -1,6 +1,7 @@
 package org.nowstart.lotto.service;
 
 import jakarta.mail.MessagingException;
+import java.io.UnsupportedEncodingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.nowstart.lotto.data.dto.MessageDto;
@@ -8,8 +9,6 @@ import org.nowstart.lotto.data.properties.LottoProperties;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
-
-import java.io.UnsupportedEncodingException;
 
 @Slf4j
 @Service
@@ -24,6 +23,7 @@ public class GoogleNotifyService {
         try {
             MimeMessageHelper helper = new MimeMessageHelper(javaMailSender.createMimeMessage(), true, "UTF-8");
 
+            helper.setFrom("no-reply@nowstart.org");
             helper.setTo(lottoProperties.getEmail());
             helper.setSubject(message.getSubject());
             helper.setText(message.getText());
