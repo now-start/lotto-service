@@ -1,5 +1,6 @@
 package org.nowstart.lotto.service;
 
+import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.nowstart.lotto.data.dto.MessageDto;
@@ -17,7 +18,7 @@ public class GoogleNotifyService {
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     private final JavaMailSender javaMailSender;
 
-    public void send(MessageDto message) {
+    public void send(MessageDto message) throws MessagingException {
         try {
             MimeMessageHelper helper = new MimeMessageHelper(javaMailSender.createMimeMessage(), true, "UTF-8");
 
