@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'org.nowstart'
-version = '5.8.2'
+version = '5.8.3'
 
 springBoot {
 	buildInfo()
@@ -33,7 +33,6 @@ ext {
 }
 
 dependencies {
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-api:2.8.13'
 	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
