@@ -28,7 +28,7 @@ public class LottoProperties {
     private Integer maxRetries = 3;
 
     @Min(value = 1000, message = "재시도 지연 시간은 최소 1초여야 합니다")
-    @Max(value = 30000, message = "재시도 지연 시간은 최대 30초까지 가능합니다")
+    @Max(value = 3600000, message = "재시도 지연 시간은 최대 1시간까지 가능합니다")
     @NotNull(message = "재시도 지연 시간은 필수입니다")
     private Integer retryDelayMs = 2000;
 
