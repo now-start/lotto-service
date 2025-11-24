@@ -11,6 +11,7 @@ public class MessageDto {
     String subject;
     String text;
     ByteArrayResource lottoImage;
+    String to;
 
     @Builder.Default
     String alias = "Lotto";

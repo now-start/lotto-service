@@ -4,6 +4,8 @@ import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.AriaRole;
 import com.microsoft.playwright.options.LoadState;
+import java.util.List;
+import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.nowstart.lotto.data.dto.LottoResultDto;
@@ -15,9 +17,6 @@ import org.nowstart.lotto.data.type.LottoConstantsType;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.function.Supplier;
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -28,15 +27,15 @@ public class LottoService {
     private final LottoProperties lottoProperties;
     private final GoogleNotifyService googleNotifyService;
 
-    public LottoUserDto loginLotto(Page page) {
-        log.info("로또 사이트 로그인 시작");
+    public LottoUserDto loginLotto(Page page, LottoProperties.User user) {
+        log.info("로또 사이트 로그인 시작 - 사용자: {}", user.getId());
 
         page.navigate(LottoConstantsType.URL_LOGIN.getValue());
 
         Locator idInput = page.getByPlaceholder(LottoConstantsType.ID_INPUT.getValue());
         if (idInput.isVisible()) {
-            idInput.fill(lottoProperties.getId());
-            page.getByPlaceholder(LottoConstantsType.PASSWORD_INPUT.getValue()).fill(lottoProperties.getPassword());
+            idInput.fill(user.getId());
+            page.getByPlaceholder(LottoConstantsType.PASSWORD_INPUT.getValue()).fill(user.getPassword());
             page.getByRole(AriaRole.GROUP, new Page.GetByRoleOptions().setName(LottoConstantsType.LOGIN_GROUP.getValue()))
                     .getByRole(AriaRole.LINK, new Locator.GetByRoleOptions().setName(LottoConstantsType.LOGIN_LINK.getValue()))
                     .click();
@@ -58,58 +57,73 @@ public class LottoService {
     }
 
     public void executeLottoTask(String failureSubject, boolean buyLotto) {
+        log.info("로또 작업 실행 시작 - 구매 여부: {}, 사용자 수: {}", buyLotto, lottoProperties.getUsers().size());
+
+        for (LottoProperties.User user : lottoProperties.getUsers()) {
+            log.info("=== 사용자 {} 작업 시작 ===", user.getId());
+            executeLottoTaskForUser(user, failureSubject, buyLotto);
+            log.info("=== 사용자 {} 작업 완료 ===", user.getId());
+        }
+
+        log.info("전체 사용자 로또 작업 완료");
+    }
+
+    private void executeLottoTaskForUser(LottoProperties.User user, String failureSubject, boolean buyLotto) {
         try (PageDto pageDto = pageService.createManagedPage()) {
             Page page = pageDto.page();
-            log.info("로또 작업 실행 시작 - 구매 여부: {}", buyLotto);
+            log.info("로또 작업 실행 - 사용자: {}, 구매 여부: {}", user.getId(), buyLotto);
 
-            LottoUserDto lottoUserDto = executeWithRetry("로그인", () -> loginLotto(page));
+            LottoUserDto lottoUserDto = executeWithRetry("로그인", () -> loginLotto(page, user));
 
             if (buyLotto) {
                 executeWithRetry("로또 구매", () -> {
-                    buyLotto(page);
-                    log.info("로또 구매 완료");
+                    buyLotto(page, user);
+                    log.info("로또 구매 완료 - 사용자: {}", user.getId());
                     return null;
                 });
             }
 
-            log.info("로또 결과 확인 중...");
+            log.info("로또 결과 확인 중 - 사용자: {}...", user.getId());
             List<LottoResultDto> results = checkLotto(page);
 
             if (!results.isEmpty()) {
                 LottoResultDto latestResult = results.get(0);
                 try {
                     googleNotifyService.send(MessageDto.builder()
-                            .subject(latestResult.toString())
+                            .subject(String.format("[%s] %s", user.getId(), latestResult.toString()))
                             .text(lottoUserDto.toString())
                             .lottoImage(detailLotto(page, latestResult))
+                            .to(user.getEmail())
                             .build());
-                    log.info("성공 알림 전송 완료");
+                    log.info("성공 알림 전송 완료 - 사용자: {}", user.getId());
                 } catch (Exception e) {
-                    log.error("성공 알림 전송 실패", e);
+                    log.error("성공 알림 전송 실패 - 사용자: {}", user.getId(), e);
                 }
             } else {
-                log.info("확인할 로또 결과가 없습니다.");
+                log.info("확인할 로또 결과가 없습니다 - 사용자: {}", user.getId());
             }
 
         } catch (Exception e) {
-            log.error("로또 작업 실행 실패: {}", e.getMessage(), e);
+            log.error("로또 작업 실행 실패 - 사용자: {}, 오류: {}", user.getId(), e.getMessage(), e);
             try {
                 String failureMessage = String.format("""
+                                [사용자: %s]
                                 작업 실행 중 오류가 발생했습니다.
-                                
+
                                 오류 유형: %s
                                 오류 메시지: %s
-                                
+
                                 자세한 내용은 서버 로그를 확인해 주세요.""",
-                        e.getClass().getSimpleName(), e.getMessage());
+                        user.getId(), e.getClass().getSimpleName(), e.getMessage());
 
                 googleNotifyService.send(MessageDto.builder()
-                        .subject(failureSubject)
+                        .subject(String.format("[%s] %s", user.getId(), failureSubject))
                         .text(failureMessage)
+                        .to(user.getEmail())
                         .build());
-                log.info("실패 알림 전송 완료");
+                log.info("실패 알림 전송 완료 - 사용자: {}", user.getId());
             } catch (Exception notificationError) {
-                log.error("실패 알림 전송도 실패함", notificationError);
+                log.error("실패 알림 전송도 실패함 - 사용자: {}", user.getId(), notificationError);
             }
         }
     }
@@ -140,14 +154,14 @@ public class LottoService {
         return new ByteArrayResource(page.screenshot());
     }
 
-    private void buyLotto(Page page) {
-        log.info("로또 구매 진행: {} 장", lottoProperties.getCount());
+    private void buyLotto(Page page, LottoProperties.User user) {
+        log.info("로또 구매 진행 - 사용자: {}, {} 장", user.getId(), user.getCount());
 
         page.navigate(LottoConstantsType.URL_PURCHASE.getValue());
         page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions()
                 .setName(LottoConstantsType.AUTO_NUMBER.getValue())).click();
         page.getByRole(AriaRole.COMBOBOX, new Page.GetByRoleOptions()
-                .setName(LottoConstantsType.QUANTITY_BOX.getValue())).selectOption(String.valueOf(lottoProperties.getCount()));
+                .setName(LottoConstantsType.QUANTITY_BOX.getValue())).selectOption(String.valueOf(user.getCount()));
 
         Locator confirmButton = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions()
                 .setName(LottoConstantsType.CONFIRM_BTN.getValue()));

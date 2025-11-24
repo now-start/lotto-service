@@ -35,20 +35,27 @@ public class LottoServiceApplication implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (!lottoProperties.getInit()) {
-            return;
-        }
+        for (LottoProperties.User user : lottoProperties.getUsers()) {
+            if (!user.getInit()) {
+                log.info("사용자 {} 초기화 스킵 (init=false)", user.getId());
+                continue;
+            }
 
-        try (PageDto pageDto = pageService.createManagedPage()) {
-            log.info("로또 서비스 초기화 테스트 시작");
-            LottoUserDto lottoUserDto = lottoService.loginLotto(pageDto.page());
-            googleNotifyService.send(MessageDto.builder()
-                    .subject("⏳Lotto Init Test⏳")
-                    .text(lottoUserDto.toString())
-                    .build());
-            log.info("초기화 테스트 완료");
-        } catch (Exception e) {
-            log.error("초기화 테스트 실패", e);
+            log.info("=== 사용자 {} 초기화 테스트 시작 ===", user.getId());
+
+            try (PageDto pageDto = pageService.createManagedPage()) {
+                LottoUserDto lottoUserDto = lottoService.loginLotto(pageDto.page(), user);
+                googleNotifyService.send(MessageDto.builder()
+                        .subject(String.format("⏳[%s] Lotto Init Test⏳", user.getId()))
+                        .text(lottoUserDto.toString())
+                        .to(user.getEmail())
+                        .build());
+                log.info("사용자 {} 초기화 테스트 완료", user.getId());
+            } catch (Exception e) {
+                log.error("사용자 {} 초기화 테스트 실패", user.getId(), e);
+            }
+
+            log.info("=== 사용자 {} 초기화 테스트 완료 ===", user.getId());
         }
     }
 }
