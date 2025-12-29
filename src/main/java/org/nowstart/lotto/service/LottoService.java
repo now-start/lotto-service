@@ -28,7 +28,7 @@ public class LottoService {
     private final GoogleNotifyService googleNotifyService;
 
     public LottoUserDto loginLotto(Page page, LottoProperties.User user) {
-        log.info("로또 사이트 로그인 시작 - 사용자: {}", user.getId());
+        log.info("[Login][{}] - Start", user.getId());
 
         page.navigate(LottoConstantsType.URL_LOGIN.getValue());
 
@@ -50,40 +50,41 @@ public class LottoService {
         page.navigate(LottoConstantsType.URL_MAIN.getValue());
         Locator information = page.locator(LottoConstantsType.USER_INFO.getValue());
 
-        return LottoUserDto.builder()
+        LottoUserDto lottoUserDto = LottoUserDto.builder()
                 .name(information.locator(LottoConstantsType.USER_NAME.getValue()).innerText())
                 .deposit(information.locator(LottoConstantsType.USER_DEPOSIT.getValue()).innerText())
                 .build();
+
+        log.info("[Login][{}] - Success, deposit: {}", user.getId(), lottoUserDto.getDeposit());
+        return lottoUserDto;
     }
 
     public void executeLottoTask(String failureSubject, boolean buyLotto) {
-        log.info("로또 작업 실행 시작 - 구매 여부: {}, 사용자 수: {}", buyLotto, lottoProperties.getUsers().size());
+        log.info("[Task] Batch Start - buyLotto: {}, userCount: {}", buyLotto, lottoProperties.getUsers().size());
 
         for (LottoProperties.User user : lottoProperties.getUsers()) {
-            log.info("=== 사용자 {} 작업 시작 ===", user.getId());
             executeLottoTaskForUser(user, failureSubject, buyLotto);
-            log.info("=== 사용자 {} 작업 완료 ===", user.getId());
         }
 
-        log.info("전체 사용자 로또 작업 완료");
+        log.info("[Task] Batch Complete");
     }
 
     private void executeLottoTaskForUser(LottoProperties.User user, String failureSubject, boolean buyLotto) {
         try (PageDto pageDto = pageService.createManagedPage()) {
             Page page = pageDto.page();
-            log.info("로또 작업 실행 - 사용자: {}, 구매 여부: {}", user.getId(), buyLotto);
+            log.info("[Task][{}] - Start, buyLotto: {}", user.getId(), buyLotto);
 
-            LottoUserDto lottoUserDto = executeWithRetry("로그인", () -> loginLotto(page, user));
+            LottoUserDto lottoUserDto = executeWithRetry("Login", () -> loginLotto(page, user));
 
             if (buyLotto) {
-                executeWithRetry("로또 구매", () -> {
+                executeWithRetry("Purchase", () -> {
                     buyLotto(page, user);
-                    log.info("로또 구매 완료 - 사용자: {}", user.getId());
+                    log.info("[Purchase][{}] - Success", user.getId());
                     return null;
                 });
             }
 
-            log.info("로또 결과 확인 중 - 사용자: {}...", user.getId());
+            log.info("[Check][{}] - Checking results", user.getId());
             List<LottoResultDto> results = checkLotto(page);
 
             if (!results.isEmpty()) {
@@ -95,16 +96,17 @@ public class LottoService {
                             .lottoImage(detailLotto(page, latestResult))
                             .to(user.getEmail())
                             .build());
-                    log.info("성공 알림 전송 완료 - 사용자: {}", user.getId());
+                    log.info("[Notify][{}] - Success Notification Sent", user.getId());
                 } catch (Exception e) {
-                    log.error("성공 알림 전송 실패 - 사용자: {}", user.getId(), e);
+                    log.error("[Notify][{}] - Success Notification Failed", user.getId(), e);
                 }
             } else {
-                log.info("확인할 로또 결과가 없습니다 - 사용자: {}", user.getId());
+                log.info("[Check][{}] - No results found", user.getId());
             }
 
+            log.info("[Task][{}] - Complete, deposit: {}", user.getId(), lottoUserDto.getDeposit());
         } catch (Exception e) {
-            log.error("로또 작업 실행 실패 - 사용자: {}, 오류: {}", user.getId(), e.getMessage(), e);
+            log.error("[Task][{}] - Failed, error: {}", user.getId(), e.getMessage(), e);
             try {
                 String failureMessage = String.format("""
                                 [사용자: %s]
@@ -121,15 +123,15 @@ public class LottoService {
                         .text(failureMessage)
                         .to(user.getEmail())
                         .build());
-                log.info("실패 알림 전송 완료 - 사용자: {}", user.getId());
+                log.info("[Notify][{}] - Failure Notification Sent", user.getId());
             } catch (Exception notificationError) {
-                log.error("실패 알림 전송도 실패함 - 사용자: {}", user.getId(), notificationError);
+                log.error("[Notify][{}] - Failure Notification Failed", user.getId(), notificationError);
             }
         }
     }
 
     private List<LottoResultDto> checkLotto(Page page) {
-        log.info("로또 결과 확인 시작");
+        log.info("[Check] Start");
 
         page.navigate(LottoConstantsType.URL_MY_PAGE.getValue());
         Locator table = page.locator(LottoConstantsType.RESULT_TABLE.getValue());
@@ -146,7 +148,7 @@ public class LottoService {
     }
 
     private ByteArrayResource detailLotto(Page page, LottoResultDto lottoResultDto) {
-        log.info("로또 상세 정보 스크린샷 촬영: {}", lottoResultDto.getNumber());
+        log.info("[Detail] Capturing screenshot - round: {}", lottoResultDto.getRound());
 
         String detailUrl = LottoConstantsType.URL_DETAIL_BASE.getFormattedValue(lottoResultDto.getNumber());
         page.navigate(detailUrl);
@@ -155,7 +157,7 @@ public class LottoService {
     }
 
     private void buyLotto(Page page, LottoProperties.User user) {
-        log.info("로또 구매 진행 - 사용자: {}, {} 장", user.getId(), user.getCount());
+        log.info("[Purchase][{}] - Proceeding, count: {}", user.getId(), user.getCount());
 
         page.navigate(LottoConstantsType.URL_PURCHASE.getValue());
         page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions()
@@ -174,17 +176,17 @@ public class LottoService {
     private <T> T executeWithRetry(String actionName, Supplier<T> action) {
         for (int attempt = 1; attempt <= lottoProperties.getMaxRetries(); attempt++) {
             try {
-                log.info("{} 시도 중... ({}/{})", actionName, attempt, lottoProperties.getMaxRetries());
+                log.info("[Retry] {} - Attempting ({}/{})", actionName, attempt, lottoProperties.getMaxRetries());
                 return action.get();
             } catch (Exception e) {
-                log.warn("{} 시도 {} 실패: {}", actionName, attempt, e.getMessage());
+                log.warn("[Retry] {} - Attempt {} Failed: {}", actionName, attempt, e.getMessage());
 
                 if (attempt == lottoProperties.getMaxRetries()) {
-                    log.error("{} 최대 재시도 횟수 ({}) 초과", actionName, lottoProperties.getMaxRetries());
+                    log.error("[Retry] {} - Max retries ({}) exceeded", actionName, lottoProperties.getMaxRetries());
                     throw new RuntimeException(actionName + " 재시도 실패: " + e.getMessage(), e);
                 }
 
-                log.info("{}ms 후 재시도...", lottoProperties.getRetryDelayMs());
+                log.info("[Retry] {} - Waiting {}ms before retry", actionName, lottoProperties.getRetryDelayMs());
                 try {
                     Thread.sleep(lottoProperties.getRetryDelayMs());
                 } catch (InterruptedException ie) {

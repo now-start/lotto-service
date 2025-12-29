@@ -28,7 +28,7 @@ public class LottoScheduler {
     @GetMapping("/check")
     @Scheduled(cron = "${lotto.cron.check}")
     public void checkLottoResults() {
-        log.info("로또 확인 스케줄 실행");
+        log.info("[Schedule] Check Start");
         lottoService.executeLottoTask("⚠️로또 확인 실패⚠️", false);
     }
 
@@ -39,7 +39,7 @@ public class LottoScheduler {
     @GetMapping("/buy")
     @Scheduled(cron = "${lotto.cron.buy}")
     public void buyLottoTickets() {
-        log.info("로또 구매 스케줄 실행");
+        log.info("[Schedule] Purchase Start");
         lottoService.executeLottoTask("⚠️로또 구매 실패⚠️", true);
     }
 }

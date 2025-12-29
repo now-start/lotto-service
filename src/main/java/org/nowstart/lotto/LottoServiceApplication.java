@@ -37,11 +37,11 @@ public class LottoServiceApplication implements CommandLineRunner {
     public void run(String... args) {
         for (LottoProperties.User user : lottoProperties.getUsers()) {
             if (!user.getInit()) {
-                log.info("사용자 {} 초기화 스킵 (init=false)", user.getId());
+                log.info("[Init][{}] - Skip", user.getId());
                 continue;
             }
 
-            log.info("=== 사용자 {} 초기화 테스트 시작 ===", user.getId());
+            log.info("[Init][{}] - Start", user.getId());
 
             try (PageDto pageDto = pageService.createManagedPage()) {
                 LottoUserDto lottoUserDto = lottoService.loginLotto(pageDto.page(), user);
@@ -50,12 +50,12 @@ public class LottoServiceApplication implements CommandLineRunner {
                         .text(lottoUserDto.toString())
                         .to(user.getEmail())
                         .build());
-                log.info("사용자 {} 초기화 테스트 완료", user.getId());
+                log.info("[Init][{}] - Success, deposit: {}", user.getId(), lottoUserDto.getDeposit());
             } catch (Exception e) {
-                log.error("사용자 {} 초기화 테스트 실패", user.getId(), e);
+                log.error("[Init][{}] - Failed", user.getId(), e);
             }
 
-            log.info("=== 사용자 {} 초기화 테스트 완료 ===", user.getId());
+            log.info("[Init][{}] - Complete", user.getId());
         }
     }
 }

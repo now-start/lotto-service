@@ -31,9 +31,9 @@ public class GoogleNotifyService {
             }
 
             javaMailSender.send(helper.getMimeMessage());
-            log.info("메일 발송 완료 - 수신자: {}, 제목: {}", message.getTo(), message.getSubject());
+            log.info("[Mail] Sent Success - to: {}, subject: {}", message.getTo(), message.getSubject());
         } catch (Exception e) {
-            log.error("메일 발송 실패 - 수신자: {}, 제목: {}, 오류: {}", message.getTo(), message.getSubject(), e.getMessage());
+            log.error("[Mail] Sent Failed - to: {}, subject: {}, error: {}", message.getTo(), message.getSubject(), e.getMessage());
             throw e;
         }
     }
