@@ -4,8 +4,10 @@ import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.AriaRole;
 import com.microsoft.playwright.options.LoadState;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
+import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.nowstart.lotto.data.dto.LottoResultDto;
@@ -47,12 +49,11 @@ public class LottoService {
             changeLaterLink.click();
         }
         page.waitForLoadState(LoadState.NETWORKIDLE);
-        page.navigate(LottoConstantsType.URL_MAIN.getValue());
-        Locator information = page.locator(LottoConstantsType.USER_INFO.getValue());
+        page.navigate(LottoConstantsType.URL_MY_PAGE.getValue());
 
         LottoUserDto lottoUserDto = LottoUserDto.builder()
-                .name(information.locator(LottoConstantsType.USER_NAME.getValue()).innerText())
-                .deposit(information.locator(LottoConstantsType.USER_DEPOSIT.getValue()).innerText())
+                .name(page.locator(LottoConstantsType.USER_NAME.getValue()).innerText())
+                .deposit(page.locator(LottoConstantsType.USER_DEPOSIT.getValue()).innerText())
                 .build();
 
         log.info("[Login][{}] - Success, deposit: {}", user.getId(), lottoUserDto.getDeposit());
@@ -93,7 +94,7 @@ public class LottoService {
                     googleNotifyService.send(MessageDto.builder()
                             .subject(String.format("[%s] %s", user.getId(), latestResult.toString()))
                             .text(lottoUserDto.toString())
-                            .lottoImage(detailLotto(page, latestResult))
+                            .lottoImage(latestResult.getLottoImage())
                             .to(user.getEmail())
                             .build());
                     log.info("[Notify][{}] - Success Notification Sent", user.getId());
@@ -132,28 +133,33 @@ public class LottoService {
 
     private List<LottoResultDto> checkLotto(Page page) {
         log.info("[Check] Start");
+        page.navigate(LottoConstantsType.RESULT_TABLE.getValue());
+        page.locator(LottoConstantsType.DATE_RANGE_THIRD_BTN.getValue()).click();
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions()
+                .setName(LottoConstantsType.SEARCH_BUTTON.getValue()))
+            .click();
 
-        page.navigate(LottoConstantsType.URL_MY_PAGE.getValue());
-        Locator table = page.locator(LottoConstantsType.RESULT_TABLE.getValue());
+        Locator rows = page.locator(LottoConstantsType.RESULT_ROW.getValue());
 
-        return table.all().stream().map(row -> LottoResultDto.builder()
-                .date(row.locator("td:nth-child(1)").innerText())
-                .round(row.locator("td:nth-child(2)").innerText())
-                .name(row.locator("td:nth-child(3)").innerText())
-                .number(row.locator("td:nth-child(4)").innerText().replace(" ", ""))
-                .count(row.locator("td:nth-child(5)").innerText())
-                .result(row.locator("td:nth-child(6)").innerText())
-                .price(row.locator("td:nth-child(7)").innerText())
-                .build()).toList();
-    }
+        return IntStream.range(0, rows.count()).mapToObj(i -> {
+            Locator r = rows.nth(i);
 
-    private ByteArrayResource detailLotto(Page page, LottoResultDto lottoResultDto) {
-        log.info("[Detail] Capturing screenshot - round: {}", lottoResultDto.getRound());
+            r.locator(LottoConstantsType.RESULT_COL_NUMBER.getValue()).click();
+            ByteArrayResource image = new ByteArrayResource(page.screenshot());
+            page.keyboard().press("Escape");
+            page.waitForTimeout(200);
 
-        String detailUrl = LottoConstantsType.URL_DETAIL_BASE.getFormattedValue(lottoResultDto.getNumber());
-        page.navigate(detailUrl);
-
-        return new ByteArrayResource(page.screenshot());
+            return LottoResultDto.builder()
+                    .date(r.locator(LottoConstantsType.RESULT_COL_DATE1.getValue()).innerText().trim())
+                    .round(r.locator(LottoConstantsType.RESULT_COL_ROUND.getValue()).innerText().trim())
+                    .name(r.locator(LottoConstantsType.RESULT_COL_NAME.getValue()).innerText().trim())
+                    .number(r.locator(LottoConstantsType.RESULT_COL_NUMBER.getValue()).innerText().trim().replace(" ", ""))
+                    .count(r.locator(LottoConstantsType.RESULT_COL_COUNT.getValue()).innerText().trim())
+                    .result(r.locator(LottoConstantsType.RESULT_COL_RESULT.getValue()).innerText().trim())
+                    .price(r.locator(LottoConstantsType.RESULT_COL_PRICE.getValue()).innerText().trim())
+                    .lottoImage(image)
+                    .build();
+        }).toList();
     }
 
     private void buyLotto(Page page, LottoProperties.User user) {
