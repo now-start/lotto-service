@@ -1,6 +1,8 @@
 package org.nowstart.lotto.config;
 
-import com.microsoft.playwright.*;
+import com.microsoft.playwright.Browser;
+import com.microsoft.playwright.BrowserType;
+import com.microsoft.playwright.Playwright;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

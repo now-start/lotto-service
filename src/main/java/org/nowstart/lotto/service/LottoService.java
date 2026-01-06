@@ -4,7 +4,6 @@ import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.AriaRole;
 import com.microsoft.playwright.options.LoadState;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
@@ -38,9 +37,7 @@ public class LottoService {
         if (idInput.isVisible()) {
             idInput.fill(user.getId());
             page.getByPlaceholder(LottoConstantsType.PASSWORD_INPUT.getValue()).fill(user.getPassword());
-            page.getByRole(AriaRole.GROUP, new Page.GetByRoleOptions().setName(LottoConstantsType.LOGIN_GROUP.getValue()))
-                    .getByRole(AriaRole.LINK, new Locator.GetByRoleOptions().setName(LottoConstantsType.LOGIN_LINK.getValue()))
-                    .click();
+            page.click(LottoConstantsType.LOGIN_LINK.getValue());
         }
 
         Locator changeLaterLink = page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions()
@@ -89,7 +86,7 @@ public class LottoService {
             List<LottoResultDto> results = checkLotto(page);
 
             if (!results.isEmpty()) {
-                LottoResultDto latestResult = results.get(0);
+                LottoResultDto latestResult = results.getFirst();
                 try {
                     googleNotifyService.send(MessageDto.builder()
                             .subject(String.format("[%s] %s", user.getId(), latestResult.toString()))
@@ -134,49 +131,56 @@ public class LottoService {
     private List<LottoResultDto> checkLotto(Page page) {
         log.info("[Check] Start");
         page.navigate(LottoConstantsType.RESULT_TABLE.getValue());
-        page.locator(LottoConstantsType.DATE_RANGE_THIRD_BTN.getValue()).click();
-        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions()
-                .setName(LottoConstantsType.SEARCH_BUTTON.getValue()))
-            .click();
+        page.click(LottoConstantsType.DETAIL_BTN.getValue());
+        page.click(LottoConstantsType.DATE_RANGE_THIRD_BTN.getValue());
+        page.click(LottoConstantsType.SEARCH_BUTTON.getValue());
+        page.waitForLoadState(LoadState.NETWORKIDLE);
 
         Locator rows = page.locator(LottoConstantsType.RESULT_ROW.getValue());
+        rows.first().waitFor();
+        int count = rows.count();
+        log.info("[Check] Found {} rows", count);
 
-        return IntStream.range(0, rows.count()).mapToObj(i -> {
-            Locator r = rows.nth(i);
+        return IntStream.range(0, count)
+                .mapToObj(rows::nth)
+                .filter(r -> {
+                    String text = r.innerText();
+                    boolean hasNoResult = text.contains("조회 결과가 없습니다");
+                    log.info("[Check] Row text: {}, hasNoResult: {}", text.replace("\n", " "), hasNoResult);
+                    return !hasNoResult;
+                })
+                .map(r -> {
+                    Locator numberLocator = r.locator(LottoConstantsType.RESULT_COL_NUMBER.getValue());
+                    numberLocator.click();
+                    Locator modalLocator = page.locator(LottoConstantsType.DETAIL_MODAL.getValue());
+                    modalLocator.waitFor();
+                    ByteArrayResource image = new ByteArrayResource(modalLocator.screenshot());
+                    page.click(LottoConstantsType.CLOSE_DETAIL_BTN.getValue());
 
-            r.locator(LottoConstantsType.RESULT_COL_NUMBER.getValue()).click();
-            ByteArrayResource image = new ByteArrayResource(page.screenshot());
-            page.keyboard().press("Escape");
-            page.waitForTimeout(200);
-
-            return LottoResultDto.builder()
-                    .date(r.locator(LottoConstantsType.RESULT_COL_DATE1.getValue()).innerText().trim())
-                    .round(r.locator(LottoConstantsType.RESULT_COL_ROUND.getValue()).innerText().trim())
-                    .name(r.locator(LottoConstantsType.RESULT_COL_NAME.getValue()).innerText().trim())
-                    .number(r.locator(LottoConstantsType.RESULT_COL_NUMBER.getValue()).innerText().trim().replace(" ", ""))
-                    .count(r.locator(LottoConstantsType.RESULT_COL_COUNT.getValue()).innerText().trim())
-                    .result(r.locator(LottoConstantsType.RESULT_COL_RESULT.getValue()).innerText().trim())
-                    .price(r.locator(LottoConstantsType.RESULT_COL_PRICE.getValue()).innerText().trim())
-                    .lottoImage(image)
-                    .build();
-        }).toList();
+                    return LottoResultDto.builder()
+                            .date(r.locator(LottoConstantsType.RESULT_COL_DATE1.getValue()).innerText().trim())
+                            .round(r.locator(LottoConstantsType.RESULT_COL_ROUND.getValue()).innerText().trim())
+                            .name(r.locator(LottoConstantsType.RESULT_COL_NAME.getValue()).innerText().trim())
+                            .number(numberLocator.innerText().trim().replace(" ", ""))
+                            .count(r.locator(LottoConstantsType.RESULT_COL_COUNT.getValue()).innerText().trim())
+                            .result(r.locator(LottoConstantsType.RESULT_COL_RESULT.getValue()).innerText().trim())
+                            .price(r.locator(LottoConstantsType.RESULT_COL_PRICE.getValue()).innerText().trim())
+                            .lottoImage(image)
+                            .build();
+                }).toList();
     }
 
     private void buyLotto(Page page, LottoProperties.User user) {
         log.info("[Purchase][{}] - Proceeding, count: {}", user.getId(), user.getCount());
 
         page.navigate(LottoConstantsType.URL_PURCHASE.getValue());
-        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions()
-                .setName(LottoConstantsType.AUTO_NUMBER.getValue())).click();
-        page.getByRole(AriaRole.COMBOBOX, new Page.GetByRoleOptions()
-                .setName(LottoConstantsType.QUANTITY_BOX.getValue())).selectOption(String.valueOf(user.getCount()));
+        page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        Locator confirmButton = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions()
-                .setName(LottoConstantsType.CONFIRM_BTN.getValue()));
-        confirmButton.click();
-        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions()
-                .setName(LottoConstantsType.PURCHASE_BTN.getValue())).click();
-        confirmButton.nth(1).click();
+        page.locator(LottoConstantsType.AUTO_NUMBER.getValue()).click();
+        page.locator(LottoConstantsType.QUANTITY_BOX.getValue()).selectOption(String.valueOf(user.getCount()));
+        page.locator(LottoConstantsType.CONFIRM_BTN.getValue()).click();
+        page.locator(LottoConstantsType.PURCHASE_BTN.getValue()).click();
+        page.locator(LottoConstantsType.FINAL_CONFIRM_BTN.getValue()).click();
     }
 
     private <T> T executeWithRetry(String actionName, Supplier<T> action) {
