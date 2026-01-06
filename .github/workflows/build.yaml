@@ -14,6 +14,8 @@ jobs:
   build-and-deploy:
     if: github.event_name == 'push'
     uses: now-start/workflow/.github/workflows/reusable-java-build.yml@main
+    with:
+      java-version: '21'
     secrets:
       registry-password: ${{ secrets.GITHUB_TOKEN }}
 
