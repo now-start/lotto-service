@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 @Builder
-public class LottoUserDto {
+public class UserDto {
     String name;
     String deposit;
 

@@ -10,15 +10,15 @@ public class MessageDto {
 
     String subject;
     String text;
-    ByteArrayResource lottoImage;
+    ByteArrayResource image;
     String to;
 
     @Builder.Default
     String alias = "Lotto";
     @Builder.Default
-    String contentId = "lottoImage";
+    String contentId = "image";
     @Builder.Default
-    String imageText = "<img src='cid:lottoImage'/>";
+    String imageText = "<img src='cid:image'/>";
 
     public String getImageText(){
         return text + "<br/><br/>" + imageText;

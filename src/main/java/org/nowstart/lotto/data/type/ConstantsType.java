@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public enum LottoConstantsType {
+public enum ConstantsType {
 
     URL_LOGIN("https://dhlottery.co.kr/login", "로그인 페이지"),
     LOGIN_GROUP("LOGIN", "로그인 그룹 ARIA 라벨"),

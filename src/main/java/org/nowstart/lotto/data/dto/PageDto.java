@@ -1,12 +1,12 @@
 package org.nowstart.lotto.data.dto;
 
 import com.microsoft.playwright.Page;
-import org.nowstart.lotto.service.PageService;
+import java.util.function.Consumer;
 
-public record PageDto(Page page, PageService pageService) implements AutoCloseable {
+public record PageDto(Page page, Consumer<Page> closeHandler) implements AutoCloseable {
 
     @Override
     public void close() {
-        pageService.closePage(page);
+        closeHandler.accept(page);
     }
 }

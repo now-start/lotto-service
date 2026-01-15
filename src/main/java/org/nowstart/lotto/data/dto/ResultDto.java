@@ -7,7 +7,7 @@ import org.springframework.core.io.ByteArrayResource;
 
 @Data
 @Builder
-public class LottoResultDto {
+public class ResultDto {
     String date;
     String round;
     String name;
@@ -15,7 +15,7 @@ public class LottoResultDto {
     String count;
     String result;
     String price;
-    ByteArrayResource lottoImage;
+    ByteArrayResource image;
 
     public String toString() {
         return MessageType.of(result).getEmoji() + name + " " + round + "회차" + MessageType.of(result).getEmoji();
