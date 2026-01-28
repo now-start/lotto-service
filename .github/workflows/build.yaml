@@ -14,8 +14,6 @@ jobs:
   build-and-deploy:
     if: github.event_name == 'push'
     uses: now-start/workflow/.github/workflows/reusable-java-build.yml@main
-    with:
-      java-version: '21'
     secrets:
       registry-password: ${{ secrets.GITHUB_TOKEN }}
 
@@ -26,10 +24,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Detect Java version
+        id: java-info
+        run: |
+          # build.gradle에서 Java 버전 추출 (더 다양한 패턴 대응)
+          DETECTED_VERSION=$(grep -E "languageVersion\\s*=\\s*JavaLanguageVersion.of" build.gradle | sed -E 's/.*of\\(([0-9]+)\\).*/\\1/' | head -1)
+          
+          if [ -z "$DETECTED_VERSION" ]; then
+            # fallback: sourceCompatibility 또는 targetCompatibility 확인
+            DETECTED_VERSION=$(grep -E "(source|target)Compatibility\\s*=\\s*['\\\"]?([0-9]+)['\\\"]?" build.gradle | sed -E "s/.*['\\\"]?([0-9]+)['\\\"]?.*/\\1/" | head -1)
+          fi
+
+          if [ -z "$DETECTED_VERSION" ]; then
+            echo "Error: Could not extract Java version from build.gradle"
+            exit 1
+          fi
+          
+          echo "version=$DETECTED_VERSION" >> $GITHUB_OUTPUT
+
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: ${{ steps.java-info.outputs.version }}
           distribution: 'temurin'
 
       - name: Make gradlew executable
