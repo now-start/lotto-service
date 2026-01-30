@@ -1,12 +1,12 @@
 plugins {
 	id 'java'
-    id 'org.springframework.boot' version '4.0.2'
-	id 'io.spring.dependency-management' version '1.1.7'
+    id 'org.springframework.boot' version '3.5.10'
+    id 'io.spring.dependency-management' version '1.1.7'
     id 'com.gorylenko.gradle-git-properties' version '2.5.4'
 }
 
 group = 'org.nowstart'
-version = '6.1.0'
+version = '7.0.0'
 
 springBoot {
 	buildInfo()
@@ -14,7 +14,7 @@ springBoot {
 
 java {
 	toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(25)
 	}
 }
 
@@ -29,12 +29,14 @@ repositories {
 }
 
 ext {
-    set('springCloudVersion', "2025.1.0")
+    set('springCloudVersion', "2025.0.1")
+    set('springDocVersion', "2.8.15")
+    set('playwrightVersion', "1.57.0")
 }
 
 dependencies {
-    implementation 'com.microsoft.playwright:playwright:1.57.0'
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-api:3.0.1'
+    implementation "com.microsoft.playwright:playwright:${playwrightVersion}"
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-api'
 	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
@@ -53,6 +55,7 @@ dependencies {
 dependencyManagement {
 	imports {
 		mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+        mavenBom "org.springdoc:springdoc-openapi-bom:${springDocVersion}"
 	}
 }
 
@@ -61,5 +64,5 @@ tasks.named('test') {
 }
 
 bootBuildImage {
-    runImage = 'mcr.microsoft.com/playwright/java:v1.57.0'
+    runImage = "mcr.microsoft.com/playwright/java:v${playwrightVersion}"
 }
