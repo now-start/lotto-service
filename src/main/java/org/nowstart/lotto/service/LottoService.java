@@ -131,9 +131,9 @@ public class LottoService {
     private List<LottoResultDto> checkLotto(Page page) {
         log.info("[Check] Start");
         page.navigate(LottoConstantsType.RESULT_TABLE.getValue());
-        page.click(LottoConstantsType.DETAIL_BTN.getValue());
-        page.click(LottoConstantsType.DATE_RANGE_THIRD_BTN.getValue());
-        page.click(LottoConstantsType.SEARCH_BUTTON.getValue());
+//        page.click(LottoConstantsType.DETAIL_BTN.getValue());
+//        page.click(LottoConstantsType.DATE_RANGE_THIRD_BTN.getValue());
+//        page.click(LottoConstantsType.SEARCH_BUTTON.getValue());
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
         Locator rows = page.locator(LottoConstantsType.RESULT_ROW.getValue());
