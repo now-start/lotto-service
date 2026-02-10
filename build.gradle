@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'org.nowstart'
-version = '8.0.1'
+version = '8.0.2'
 
 springBoot {
 	buildInfo()
@@ -67,8 +67,8 @@ bootBuildImage {
     runImage = "mcr.microsoft.com/playwright/java:v${playwrightVersion}"
 
     buildpacks = [
-            "docker.io/paketobuildpacks/opentelemetry",
-            "docker.io/paketobuildpacks/java"
+            "docker.io/paketobuildpacks/java",
+            "docker.io/paketobuildpacks/opentelemetry"
     ]
 
     environment.put("BP_OPENTELEMETRY_ENABLED", "true")
