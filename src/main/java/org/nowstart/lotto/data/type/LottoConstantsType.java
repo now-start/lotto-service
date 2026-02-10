@@ -19,11 +19,11 @@ public enum LottoConstantsType {
     USER_DEPOSIT("#totalAmt", "예치금"),
 
     RESULT_TABLE("https://dhlottery.co.kr/mypage/mylotteryledger", "구매/당첨 내역 페이지"),
-    DETAIL_BTN("#srchBtnToggle", "상세보기 버튼"),
-    DATE_RANGE_THIRD_BTN(
-            "#containerBox > div.content-box-wrap > div > div > div > form > div.search-wrap.graybox.toggle-content > div > div:nth-child(2) > div > div.col-td > div.btn-wrap > button:nth-child(3)",
-            "기간 버튼 3번째(사용자 지정 기간 등)"),
-    SEARCH_BUTTON("#btnSrch", "검색 버튼 라벨"),
+    //    DETAIL_BTN("#srchBtnToggle", "상세보기 버튼"),
+//    DATE_RANGE_THIRD_BTN(
+//            "#containerBox > div.content-box-wrap > div > div > div > form > div.search-wrap.graybox.toggle-content > div > div:nth-child(2) > div > div.col-td > div.btn-wrap > button:nth-child(3)",
+//            "기간 버튼 3번째(사용자 지정 기간 등)"),
+//    SEARCH_BUTTON("#btnSrch", "검색 버튼 라벨"),
     RESULT_ROW(".whl-row", "결과 행(리스트 아이템)"),
     RESULT_COL_DATE1(".col-date1 .whl-txt", "구입일자 텍스트"),
     RESULT_COL_NAME(".col-name .whl-txt", "복권명 텍스트"),
@@ -34,7 +34,6 @@ public enum LottoConstantsType {
     RESULT_COL_PRICE(".col-am .whl-txt", "당첨금 텍스트"),
     DETAIL_MODAL("#Lotto645TicketP > div.pop-up > div", "상세 번호 팝업 모달"),
     CLOSE_DETAIL_BTN("#Lotto645TicketP > div.pop-up > div > div.pop-head > button", "상세 팝업 닫기 버튼"),
-
 
     URL_PURCHASE("https://ol.dhlottery.co.kr/olotto/game/game645.do", "구매 페이지"),
     AUTO_NUMBER("#num2", "자동번호발급"),
