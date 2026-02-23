@@ -80,7 +80,7 @@ public class LottoTaskOrchestrator {
             }
 
             List<LottoResultDto> results = executeStepWithRetry(mode, "check", user, () -> lottoResultService.check(page));
-            lottoNotificationService.sendSuccess(user, lottoUserDto, results);
+            lottoNotificationService.sendSuccess(user, mode, lottoUserDto, results);
 
             log.info("[Task][{}] Success mode={} deposit={}", user.getId(), mode, lottoUserDto.getDeposit());
             return true;

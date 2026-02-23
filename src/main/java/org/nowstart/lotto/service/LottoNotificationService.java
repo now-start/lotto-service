@@ -7,6 +7,7 @@ import org.nowstart.lotto.data.dto.LottoResultDto;
 import org.nowstart.lotto.data.dto.LottoUserDto;
 import org.nowstart.lotto.data.dto.MessageDto;
 import org.nowstart.lotto.data.properties.LottoProperties;
+import org.nowstart.lotto.data.type.MessageType;
 import org.nowstart.lotto.data.type.TaskMode;
 import org.springframework.stereotype.Service;
 
@@ -17,13 +18,27 @@ public class LottoNotificationService {
 
     private final NotifyService notifyService;
 
-    public void sendSuccess(LottoProperties.User user, LottoUserDto lottoUserDto, List<LottoResultDto> results) {
+    public void sendSuccess(
+            LottoProperties.User user,
+            TaskMode mode,
+            LottoUserDto lottoUserDto,
+            List<LottoResultDto> results
+    ) {
+        long depositValue = parseAmount(lottoUserDto.getDeposit());
+
         if (results.isEmpty()) {
             log.info("[Notify][{}] Skip success notification because there are no lotto results", user.getId());
+            log.info("[UserSummary][{}] mode={} result=NONE round=NONE prizeRaw=\"0\" prizeValue=0 depositRaw=\"{}\" depositValue={}",
+                    user.getId(), mode, lottoUserDto.getDeposit(), depositValue);
             return;
         }
 
         LottoResultDto latestResult = results.getFirst();
+        long prizeValue = parseAmount(latestResult.getPrice());
+        MessageType messageType = MessageType.of(latestResult.getResult());
+        log.info("[UserSummary][{}] mode={} result={} round={} prizeRaw=\"{}\" prizeValue={} depositRaw=\"{}\" depositValue={}",
+                user.getId(), mode, messageType.name(), latestResult.getRound(), latestResult.getPrice(), prizeValue,
+                lottoUserDto.getDeposit(), depositValue);
         MessageDto messageDto = MessageDto.builder()
                 .subject(String.format("[%s] %s", user.getId(), latestResult))
                 .text(lottoUserDto.toString())
@@ -61,6 +76,23 @@ public class LottoNotificationService {
             log.info("[Notify][{}] Failure notification sent", user.getId());
         } catch (Exception notificationError) {
             log.error("[Notify][{}] Failure notification failed", user.getId(), notificationError);
+        }
+    }
+
+    private long parseAmount(String amountText) {
+        if (amountText == null) {
+            return 0L;
+        }
+
+        String digits = amountText.replaceAll("[^0-9]", "");
+        if (digits.isEmpty()) {
+            return 0L;
+        }
+
+        try {
+            return Long.parseLong(digits);
+        } catch (NumberFormatException exception) {
+            return 0L;
         }
     }
 }

@@ -31,7 +31,7 @@
     {
       "datasource": {
         "type": "loki",
-        "uid": "${DS_LOKI}"
+        "uid": "loki"
       },
       "fieldConfig": {
         "defaults": {
@@ -63,18 +63,18 @@
       },
       "targets": [
         {
-          "expr": "sum(count_over_time({service_name=~\"$job\", service_instance_id=~\"$instance\"} |= \"[Task] Batch complete\" |~ \"mode=($mode)\" |~ \"trigger=($trigger)\" [5m]))",
+          "expr": "sum(count_over_time({service_name=~\".+\", service_instance_id=~\".+\"} |= \"[Task] Batch complete\" |= \"trigger=SCHEDULE\" [7d]))",
           "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Batch Runs (5m)",
+      "title": "주간 스케줄 실행 횟수 (7일)",
       "type": "stat"
     },
     {
       "datasource": {
         "type": "loki",
-        "uid": "${DS_LOKI}"
+        "uid": "loki"
       },
       "fieldConfig": {
         "defaults": {
@@ -123,18 +123,18 @@
       },
       "targets": [
         {
-          "expr": "100 * sum(count_over_time({service_name=~\"$job\", service_instance_id=~\"$instance\"} |= \"[Task] Batch complete\" |~ \"mode=($mode)\" |~ \"trigger=($trigger)\" |= \"status=SUCCESS\" [5m])) / clamp_min(sum(count_over_time({service_name=~\"$job\", service_instance_id=~\"$instance\"} |= \"[Task] Batch complete\" |~ \"mode=($mode)\" |~ \"trigger=($trigger)\" [5m])), 1)",
+          "expr": "100 * sum(count_over_time({service_name=~\".+\", service_instance_id=~\".+\"} |= \"[Task] Batch complete\" |= \"trigger=SCHEDULE\" |= \"status=SUCCESS\" [7d])) / (sum(count_over_time({service_name=~\".+\", service_instance_id=~\".+\"} |= \"[Task] Batch complete\" |= \"trigger=SCHEDULE\" [7d])) + 0.0001)",
           "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Batch Success Rate (5m)",
+      "title": "주간 스케줄 성공률 (7일)",
       "type": "stat"
     },
     {
       "datasource": {
         "type": "loki",
-        "uid": "${DS_LOKI}"
+        "uid": "loki"
       },
       "fieldConfig": {
         "defaults": {
@@ -182,18 +182,18 @@
       },
       "targets": [
         {
-          "expr": "100 * sum(count_over_time({service_name=~\"$job\", service_instance_id=~\"$instance\"} |= \"[Task][\" |~ \"Failed mode=($mode)\" [5m])) / clamp_min((sum(count_over_time({service_name=~\"$job\", service_instance_id=~\"$instance\"} |= \"[Task][\" |~ \"Success mode=($mode)\" [5m])) + sum(count_over_time({service_name=~\"$job\", service_instance_id=~\"$instance\"} |= \"[Task][\" |~ \"Failed mode=($mode)\" [5m]))), 1)",
+          "expr": "100 * sum(count_over_time({service_name=~\".+\", service_instance_id=~\".+\"} |= \"[Task][\" |= \"Failed mode=\" [7d])) / ((sum(count_over_time({service_name=~\".+\", service_instance_id=~\".+\"} |= \"[Task][\" |= \"Success mode=\" [7d])) + sum(count_over_time({service_name=~\".+\", service_instance_id=~\".+\"} |= \"[Task][\" |= \"Failed mode=\" [7d]))) + 0.0001)",
           "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Failed User Rate (5m)",
+      "title": "사용자 실패율 (7일)",
       "type": "gauge"
     },
     {
       "datasource": {
         "type": "loki",
-        "uid": "${DS_LOKI}"
+        "uid": "loki"
       },
       "fieldConfig": {
         "defaults": {
@@ -238,18 +238,18 @@
       },
       "targets": [
         {
-          "expr": "sum(count_over_time({service_name=~\"$job\", service_instance_id=~\"$instance\"} |= \"[Notify][\" |= \"notification failed\" [5m]))",
+          "expr": "sum(count_over_time({service_name=~\".+\", service_instance_id=~\".+\"} |= \"[Notify][\" |= \"notification failed\" [7d]))",
           "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Notification Failures (5m)",
+      "title": "알림 실패 건수 (7일)",
       "type": "stat"
     },
     {
       "datasource": {
         "type": "loki",
-        "uid": "${DS_LOKI}"
+        "uid": "loki"
       },
       "fieldConfig": {
         "defaults": {
@@ -291,25 +291,25 @@
       },
       "targets": [
         {
-          "expr": "quantile_over_time(0.50, {service_name=~\"$job\", service_instance_id=~\"$instance\"} |= \"[Task] Batch complete\" |~ \"mode=($mode)\" |~ \"trigger=($trigger)\" | regexp \"durationMs=(?P<durationMs>[0-9]+)\" | unwrap durationMs [$__interval])",
+          "expr": "quantile_over_time(0.50, {service_name=~\".+\", service_instance_id=~\".+\"} |= \"[Task] Batch complete\" |= \"trigger=SCHEDULE\" | regexp \"durationMs=(?P<durationMs>[0-9]+)\" | unwrap durationMs [7d])",
           "legendFormat": "p50",
           "queryType": "range",
           "refId": "A"
         },
         {
-          "expr": "quantile_over_time(0.95, {service_name=~\"$job\", service_instance_id=~\"$instance\"} |= \"[Task] Batch complete\" |~ \"mode=($mode)\" |~ \"trigger=($trigger)\" | regexp \"durationMs=(?P<durationMs>[0-9]+)\" | unwrap durationMs [$__interval])",
+          "expr": "quantile_over_time(0.95, {service_name=~\".+\", service_instance_id=~\".+\"} |= \"[Task] Batch complete\" |= \"trigger=SCHEDULE\" | regexp \"durationMs=(?P<durationMs>[0-9]+)\" | unwrap durationMs [7d])",
           "legendFormat": "p95",
           "queryType": "range",
           "refId": "B"
         }
       ],
-      "title": "Batch Duration p50/p95 (ms)",
+      "title": "배치 처리 시간 p50/p95 (ms)",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "loki",
-        "uid": "${DS_LOKI}"
+        "uid": "loki"
       },
       "fieldConfig": {
         "defaults": {
@@ -338,201 +338,25 @@
       },
       "targets": [
         {
-          "expr": "sum by (status) (count_over_time({service_name=~\"$job\", service_instance_id=~\"$instance\"} |= \"[Task] Batch complete\" |~ \"mode=($mode)\" |~ \"trigger=($trigger)\" | regexp \"status=(?P<status>[A-Z_]+)\" [$__interval]))",
+          "expr": "sum by (status) (count_over_time({service_name=~\".+\", service_instance_id=~\".+\"} |= \"[Task] Batch complete\" |= \"trigger=SCHEDULE\" | regexp \"status=(?P<status>[A-Z_]+)\" [7d]))",
           "legendFormat": "{{status}}",
           "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Batch Status Trend",
+      "title": "주간 배치 상태 추이",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "loki",
-        "uid": "${DS_LOKI}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none"
-        },
-        "overrides": []
+        "uid": "loki"
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
+        "w": 24,
         "x": 0,
         "y": 13
-      },
-      "id": 7,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "expr": "sum by (step) (count_over_time({service_name=~\"$job\", service_instance_id=~\"$instance\"} |= \"Failed mode=\" |~ \"mode=($mode)\" | regexp \"step=(?P<step>[a-zA-Z_]+)\" [$__interval]))",
-          "legendFormat": "{{step}}",
-          "queryType": "range",
-          "refId": "A"
-        }
-      ],
-      "title": "Step Failures",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "${DS_LOKI}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 13
-      },
-      "id": 8,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "expr": "sum by (step) (count_over_time({service_name=~\"$job\", service_instance_id=~\"$instance\"} |= \"[Retry] step=\" |= \"failed attempt=\" | regexp \"step=(?P<step>[a-zA-Z_]+)\" [$__interval]))",
-          "legendFormat": "{{step}}",
-          "queryType": "range",
-          "refId": "A"
-        }
-      ],
-      "title": "Retry Attempts",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "${DS_LOKI}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 13
-      },
-      "id": 9,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "expr": "avg_over_time({service_name=~\"$job\", service_instance_id=~\"$instance\"} |= \"[Check] Complete resultCount=\" | regexp \"resultCount=(?P<resultCount>[0-9]+)\" | unwrap resultCount [$__interval])",
-          "legendFormat": "avg_result_count",
-          "queryType": "range",
-          "refId": "A"
-        }
-      ],
-      "title": "Average Result Count",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "${DS_LOKI}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 21
-      },
-      "id": 10,
-      "options": {
-        "displayLabels": [
-          "name",
-          "value",
-          "percent"
-        ],
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "pieType": "pie",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "expr": "sum by (mode) (count_over_time({service_name=~\"$job\", service_instance_id=~\"$instance\"} |= \"[Task] Batch complete\" |~ \"trigger=($trigger)\" | regexp \"mode=(?P<mode>[A-Z_]+)\" [24h]))",
-          "legendFormat": "{{mode}}",
-          "queryType": "range",
-          "refId": "A"
-        }
-      ],
-      "title": "Mode Ratio (24h)",
-      "type": "piechart"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "${DS_LOKI}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 21
       },
       "id": 11,
       "options": {
@@ -547,16 +371,139 @@
       },
       "targets": [
         {
-          "expr": "{service_name=~\"$job\", service_instance_id=~\"$instance\"} |= \"[Task]\" |~ \"Failed|Batch complete|Batch start\"",
+          "expr": "{service_name=~\".+\", service_instance_id=~\".+\"} |= \"[Task]\" |~ \"Failed|Batch complete|Batch start\"",
           "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Execution Logs",
+      "title": "실행 로그",
       "type": "logs"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 21
+      },
+      "id": 12,
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true
+      },
+      "targets": [
+        {
+          "expr": "sum by (user) (count_over_time({service_name=~\".+\", service_instance_id=~\".+\"} |= \"[UserSummary][\" |= \"result=WIN\" | pattern \"[UserSummary][<user>] mode=<mode> result=<result> round=<round> prizeRaw=\\\"<prizeRaw>\\\" prizeValue=<prizeValue> depositRaw=\\\"<depositRaw>\\\" depositValue=<depositValue>\" [7d]))",
+          "legendFormat": "{{user}}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "사용자별 당첨 횟수 (7일)",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyKRW"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 21
+      },
+      "id": 13,
+      "options": {
+        "displayMode": "lcd",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true
+      },
+      "targets": [
+        {
+          "expr": "sum by (user, round) (max_over_time({service_name=~\".+\", service_instance_id=~\".+\"} |= \"[UserSummary][\" |= \"result=WIN\" | pattern \"[UserSummary][<user>] mode=<mode> result=<result> round=<round> prizeRaw=\\\"<prizeRaw>\\\" prizeValue=<prizeValue> depositRaw=\\\"<depositRaw>\\\" depositValue=<depositValue>\" | unwrap prizeValue [7d]))",
+          "legendFormat": "{{user}} / {{round}}회",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "사용자별 당첨금",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyKRW"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 21
+      },
+      "id": 14,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "max_over_time({service_name=~\".+\", service_instance_id=~\".+\"} |= \"[UserSummary][\" | pattern \"[UserSummary][<user>] mode=<mode> result=<result> round=<round> prizeRaw=\\\"<prizeRaw>\\\" prizeValue=<prizeValue> depositRaw=\\\"<depositRaw>\\\" depositValue=<depositValue>\" | unwrap depositValue [7d])",
+          "legendFormat": "{{user}}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "사용자별 예치금 추이 (주간)",
+      "type": "timeseries"
     }
   ],
-  "refresh": "30s",
+  "refresh": "1h",
   "schemaVersion": 39,
   "style": "dark",
   "tags": [
@@ -565,142 +512,16 @@
     "logs"
   ],
   "templating": {
-    "list": [
-      {
-        "current": {
-          "selected": true,
-          "text": "Loki",
-          "value": "Loki"
-        },
-        "hide": 0,
-        "includeAll": false,
-        "label": "datasource",
-        "multi": false,
-        "name": "DS_LOKI",
-        "options": [],
-        "query": "loki",
-        "refresh": 1,
-        "regex": "",
-        "type": "datasource"
-      },
-      {
-        "allValue": ".+",
-        "current": {
-          "selected": true,
-          "text": "All",
-          "value": "$__all"
-        },
-        "datasource": {
-          "type": "loki",
-          "uid": "${DS_LOKI}"
-        },
-        "hide": 0,
-        "includeAll": true,
-        "label": "job",
-        "multi": true,
-        "name": "job",
-        "options": [],
-        "query": "label_values({service_name=~\".+\"}, service_name)",
-        "refresh": 2,
-        "regex": "",
-        "sort": 1,
-        "type": "query"
-      },
-      {
-        "allValue": ".+",
-        "current": {
-          "selected": true,
-          "text": "All",
-          "value": "$__all"
-        },
-        "datasource": {
-          "type": "loki",
-          "uid": "${DS_LOKI}"
-        },
-        "hide": 0,
-        "includeAll": true,
-        "label": "instance",
-        "multi": true,
-        "name": "instance",
-        "options": [],
-        "query": "label_values({service_name=~\"$job\"}, service_instance_id)",
-        "refresh": 2,
-        "regex": "",
-        "sort": 1,
-        "type": "query"
-      },
-      {
-        "current": {
-          "selected": true,
-          "text": "All",
-          "value": ".*"
-        },
-        "hide": 0,
-        "includeAll": false,
-        "label": "mode",
-        "multi": false,
-        "name": "mode",
-        "options": [
-          {
-            "selected": true,
-            "text": "All",
-            "value": ".*"
-          },
-          {
-            "selected": false,
-            "text": "CHECK_ONLY",
-            "value": "CHECK_ONLY"
-          },
-          {
-            "selected": false,
-            "text": "BUY_AND_CHECK",
-            "value": "BUY_AND_CHECK"
-          }
-        ],
-        "query": ".*,CHECK_ONLY,BUY_AND_CHECK",
-        "type": "custom"
-      },
-      {
-        "current": {
-          "selected": true,
-          "text": "All",
-          "value": ".*"
-        },
-        "hide": 0,
-        "includeAll": false,
-        "label": "trigger",
-        "multi": false,
-        "name": "trigger",
-        "options": [
-          {
-            "selected": true,
-            "text": "All",
-            "value": ".*"
-          },
-          {
-            "selected": false,
-            "text": "SCHEDULE",
-            "value": "SCHEDULE"
-          },
-          {
-            "selected": false,
-            "text": "MANUAL",
-            "value": "MANUAL"
-          }
-        ],
-        "query": ".*,SCHEDULE,MANUAL",
-        "type": "custom"
-      }
-    ]
+    "list": []
   },
   "time": {
-    "from": "now-24h",
+    "from": "now-14d",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Lotto Service - Log Operations (Loki)",
+  "title": "로또 서비스 - 로그 운영 대시보드 (Loki)",
   "uid": "lotto-log-ops",
-  "version": 2,
+  "version": 10,
   "weekStart": ""
 }

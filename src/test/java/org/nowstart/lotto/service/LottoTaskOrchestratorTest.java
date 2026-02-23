@@ -88,7 +88,7 @@ class LottoTaskOrchestratorTest {
         assertThat(result.successUsers()).isEqualTo(1);
         assertThat(result.failedUsers()).isZero();
 
-        verify(lottoNotificationService).sendSuccess(eq(user), any(LottoUserDto.class), anyList());
+        verify(lottoNotificationService).sendSuccess(eq(user), eq(TaskMode.CHECK_ONLY), any(LottoUserDto.class), anyList());
         verify(lottoNotificationService, never()).sendFailure(any(), any(), any());
     }
 
