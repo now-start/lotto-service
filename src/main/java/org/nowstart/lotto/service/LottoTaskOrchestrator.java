@@ -30,13 +30,17 @@ public class LottoTaskOrchestrator {
     private final RetryExecutor retryExecutor;
 
     public BatchExecutionResult execute(TaskMode mode, TriggerType trigger) {
-        log.info("[Task] Batch start mode={} trigger={} userCount={}", mode, trigger, lottoProperties.getUsers().size());
+        return execute(mode, trigger, lottoProperties.getUsers());
+    }
+
+    public BatchExecutionResult execute(TaskMode mode, TriggerType trigger, List<LottoProperties.User> targetUsers) {
+        log.info("[Task] Batch start mode={} trigger={} userCount={}", mode, trigger, targetUsers.size());
         Instant startedAt = Instant.now();
         long startedNano = System.nanoTime();
 
         int successUsers = 0;
         int failedUsers = 0;
-        for (LottoProperties.User user : lottoProperties.getUsers()) {
+        for (LottoProperties.User user : targetUsers) {
             if (executeForUser(user, mode)) {
                 successUsers++;
             } else {
@@ -46,7 +50,7 @@ public class LottoTaskOrchestrator {
 
         Instant endedAt = Instant.now();
         long durationMs = (System.nanoTime() - startedNano) / 1_000_000;
-        int totalUsers = lottoProperties.getUsers().size();
+        int totalUsers = targetUsers.size();
         ExecutionStatus status = ExecutionStatus.fromCounts(totalUsers, failedUsers);
 
         BatchExecutionResult result = new BatchExecutionResult(
@@ -71,15 +75,15 @@ public class LottoTaskOrchestrator {
             Page page = pageDto.page();
             log.info("[Task][{}] Start mode={}", user.getId(), mode);
 
-            LottoUserDto lottoUserDto = executeStepWithRetry(mode, "login", user, () -> lottoLoginService.login(page, user));
+            LottoUserDto lottoUserDto = executeStepWithRetry("login", user, () -> lottoLoginService.login(page, user));
             if (mode.isBuyEnabled()) {
-                executeStepWithRetry(mode, "purchase", user, () -> {
+                executeStepWithRetry("purchase", user, () -> {
                     lottoPurchaseService.buy(page, user);
                     return null;
                 });
             }
 
-            List<LottoResultDto> results = executeStepWithRetry(mode, "check", user, () -> lottoResultService.check(page));
+            List<LottoResultDto> results = executeStepWithRetry("check", user, () -> lottoResultService.check(page));
             lottoNotificationService.sendSuccess(user, mode, lottoUserDto, results);
 
             log.info("[Task][{}] Success mode={} deposit={}", user.getId(), mode, lottoUserDto.getDeposit());
@@ -96,7 +100,6 @@ public class LottoTaskOrchestrator {
     }
 
     private <T> T executeStepWithRetry(
-            TaskMode mode,
             String step,
             LottoProperties.User user,
             java.util.function.Supplier<T> action
