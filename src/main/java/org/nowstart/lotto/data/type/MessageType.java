@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum MessageType {
-    WAITE("미추첨", "⏳"),
+    WAIT("미추첨", "⏳"),
     WIN("당첨", "🎉"),
     NO_WIN("낙첨", "☠️"),
     UNDEFINED("", "");

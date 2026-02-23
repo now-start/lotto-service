@@ -6,8 +6,8 @@ import org.nowstart.lotto.data.dto.LottoUserDto;
 import org.nowstart.lotto.data.dto.MessageDto;
 import org.nowstart.lotto.data.dto.PageDto;
 import org.nowstart.lotto.data.properties.LottoProperties;
-import org.nowstart.lotto.service.GoogleNotifyService;
 import org.nowstart.lotto.service.LottoService;
+import org.nowstart.lotto.service.NotifyService;
 import org.nowstart.lotto.service.PageService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -26,10 +26,10 @@ public class LottoServiceApplication implements CommandLineRunner {
 
     private final LottoProperties lottoProperties;
     private final PageService pageService;
-    private final GoogleNotifyService googleNotifyService;
+    private final NotifyService notifyService;
     private final LottoService lottoService;
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         SpringApplication.run(LottoServiceApplication.class, args);
     }
 
@@ -45,7 +45,7 @@ public class LottoServiceApplication implements CommandLineRunner {
 
             try (PageDto pageDto = pageService.createManagedPage()) {
                 LottoUserDto lottoUserDto = lottoService.loginLotto(pageDto.page(), user);
-                googleNotifyService.send(MessageDto.builder()
+                notifyService.send(MessageDto.builder()
                         .subject(String.format("⏳[%s] Lotto Init Test⏳", user.getId()))
                         .text(lottoUserDto.toString())
                         .to(user.getEmail())
