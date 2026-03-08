@@ -18,12 +18,12 @@ public class LottoScheduler {
     @Scheduled(cron = "${lotto.cron.check}")
     public void checkLottoResults() {
         log.info("[Schedule] Check Start");
-        lottoService.execute(TaskMode.CHECK_ONLY, TriggerType.SCHEDULE);
+        lottoService.execute(TaskMode.CHECK_ONLY, TriggerType.SCHEDULE, null);
     }
 
     @Scheduled(cron = "${lotto.cron.buy}")
     public void buyLottoTickets() {
         log.info("[Schedule] Purchase Start");
-        lottoService.execute(TaskMode.BUY_AND_CHECK, TriggerType.SCHEDULE);
+        lottoService.execute(TaskMode.BUY_AND_CHECK, TriggerType.SCHEDULE, null);
     }
 }

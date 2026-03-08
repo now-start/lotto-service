@@ -5,12 +5,18 @@ import com.microsoft.playwright.options.LoadState;
 import lombok.extern.slf4j.Slf4j;
 import org.nowstart.lotto.data.properties.LottoProperties;
 import org.nowstart.lotto.data.type.LottoConstantsType;
+import org.springframework.resilience.annotation.Retryable;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
 public class LottoPurchaseService {
 
+    @Retryable(
+            includes = Exception.class,
+            maxRetriesString = "${lotto.max-retries:3}",
+            delayString = "${lotto.retry-delay-ms:2000}"
+    )
     public void buy(Page page, LottoProperties.User user) {
         log.info("[Purchase][{}] Start count={}", user.getId(), user.getCount());
 

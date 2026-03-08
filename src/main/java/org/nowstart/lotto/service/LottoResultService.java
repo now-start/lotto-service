@@ -9,12 +9,18 @@ import lombok.extern.slf4j.Slf4j;
 import org.nowstart.lotto.data.dto.LottoResultDto;
 import org.nowstart.lotto.data.type.LottoConstantsType;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.resilience.annotation.Retryable;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
 public class LottoResultService {
 
+    @Retryable(
+            includes = Exception.class,
+            maxRetriesString = "${lotto.max-retries:3}",
+            delayString = "${lotto.retry-delay-ms:2000}"
+    )
     public List<LottoResultDto> check(Page page) {
         log.info("[Check] Start");
         page.navigate(LottoConstantsType.RESULT_TABLE.getValue());
