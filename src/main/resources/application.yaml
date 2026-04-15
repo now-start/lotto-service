@@ -3,3 +3,9 @@ spring:
     name: lotto
   config:
     import: ${SPRING_CONFIG_IMPORT:optional:configserver:https://spring.nowstart.org/config}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,refresh,busrefresh

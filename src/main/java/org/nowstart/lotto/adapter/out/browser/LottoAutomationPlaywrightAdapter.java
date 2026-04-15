@@ -3,9 +3,9 @@ package org.nowstart.lotto.adapter.out.browser;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.nowstart.lotto.application.port.out.LottoAutomationPort;
+import org.nowstart.lotto.application.port.out.LottoAutomationPort.CheckResult;
 import org.nowstart.lotto.application.port.out.LottoAutomationSession;
 import org.nowstart.lotto.domain.model.LottoAccountSnapshot;
-import org.nowstart.lotto.domain.model.LottoResult;
 import org.nowstart.lotto.domain.model.LottoUser;
 import org.springframework.stereotype.Component;
 
@@ -34,7 +34,7 @@ public class LottoAutomationPlaywrightAdapter implements LottoAutomationPort {
     }
 
     @Override
-    public List<LottoResult> check(LottoAutomationSession session) {
+    public List<CheckResult> check(LottoAutomationSession session) {
         return playwrightResultExecutor.check(playwrightSessionManager.requirePage(session));
     }
 }

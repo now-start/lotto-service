@@ -5,15 +5,13 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.nowstart.lotto.application.dto.CheckLottoCommand;
-import org.nowstart.lotto.application.dto.PurchaseLottoCommand;
-import org.nowstart.lotto.application.model.LottoCheckResult;
 import org.nowstart.lotto.application.port.in.LottoUseCase;
+import org.nowstart.lotto.application.port.in.LottoUseCase.TargetCommand;
 import org.nowstart.lotto.application.port.out.LoadLottoUsersPort;
 import org.nowstart.lotto.application.port.out.LottoAutomationPort;
+import org.nowstart.lotto.application.port.out.LottoAutomationPort.CheckResult;
 import org.nowstart.lotto.application.port.out.LottoAutomationSession;
 import org.nowstart.lotto.application.port.out.SendNotificationPort;
 import org.nowstart.lotto.domain.exception.InvalidManualUserSelectionException;
@@ -39,12 +37,12 @@ public class LottoInteractor implements LottoUseCase {
     private final LottoNotificationFactory lottoNotificationFactory;
 
     @Override
-    public LottoExecution check(CheckLottoCommand command) {
+    public LottoExecution check(TargetCommand command) {
         return execute(command.trigger(), command.userIds(), TaskMode.CHECK);
     }
 
     @Override
-    public LottoExecution purchase(PurchaseLottoCommand command) {
+    public LottoExecution purchase(TargetCommand command) {
         return execute(command.trigger(), command.userIds(), TaskMode.PURCHASE);
     }
 
@@ -96,19 +94,16 @@ public class LottoInteractor implements LottoUseCase {
             LottoAccountSnapshot accountSnapshot = runStep(StepType.LOGIN, user,
                     () -> lottoAutomationPort.login(session, user));
 
-            if (mode == TaskMode.CHECK) {
-                List<LottoCheckResult> results = runStep(StepType.CHECK, user, () -> lottoAutomationPort.check(session));
-                lottoNotificationFactory.createCheckSuccessMessage(user, accountSnapshot, results)
-                        .ifPresent(message -> sendNotification(user, message, "success"));
-            } else {
+            if (mode == TaskMode.PURCHASE) {
                 runStep(StepType.PURCHASE, user, () -> {
                     lottoAutomationPort.buy(session, user);
                     return null;
                 });
-                List<LottoCheckResult> results = runStep(StepType.CHECK, user, () -> lottoAutomationPort.check(session));
-                lottoNotificationFactory.createCheckSuccessMessage(user, accountSnapshot, results)
-                        .ifPresent(message -> sendNotification(user, message, "success"));
             }
+
+            List<CheckResult> results = runStep(StepType.CHECK, user, () -> lottoAutomationPort.check(session));
+            lottoNotificationFactory.createCheckSuccessMessage(user, accountSnapshot, results)
+                    .ifPresent(message -> sendNotification(user, message, "success"));
 
             log.info("[Task][{}] Success mode={} deposit={}", user.id(), mode, accountSnapshot.deposit());
             return true;
@@ -125,18 +120,7 @@ public class LottoInteractor implements LottoUseCase {
 
     private List<LottoUser> resolveTargetUsers(List<String> requestedUserIds) {
         List<LottoUser> allUsers = loadLottoUsersPort.loadUsers();
-        if (requestedUserIds == null || requestedUserIds.isEmpty()) {
-            return allUsers;
-        }
-
-        List<String> normalizedUserIds = requestedUserIds.stream()
-                .filter(Objects::nonNull)
-                .map(String::trim)
-                .filter(id -> !id.isEmpty())
-                .distinct()
-                .toList();
-
-        if (normalizedUserIds.isEmpty()) {
+        if (requestedUserIds.isEmpty()) {
             return allUsers;
         }
 
@@ -145,7 +129,7 @@ public class LottoInteractor implements LottoUseCase {
             usersById.putIfAbsent(user.id(), user);
         }
 
-        List<String> invalidUserIds = normalizedUserIds.stream()
+        List<String> invalidUserIds = requestedUserIds.stream()
                 .filter(id -> !usersById.containsKey(id))
                 .toList();
 
@@ -156,7 +140,7 @@ public class LottoInteractor implements LottoUseCase {
             );
         }
 
-        return normalizedUserIds.stream()
+        return requestedUserIds.stream()
                 .map(usersById::get)
                 .toList();
     }

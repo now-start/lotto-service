@@ -15,7 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.nowstart.lotto.application.port.in.ExecuteLottoUseCase;
+import org.nowstart.lotto.application.port.in.LottoUseCase;
+import org.nowstart.lotto.application.port.in.LottoUseCase.TargetCommand;
 import org.nowstart.lotto.domain.exception.InvalidManualUserSelectionException;
 import org.nowstart.lotto.domain.model.LottoExecution;
 import org.nowstart.lotto.domain.type.ExecutionStatus;
@@ -28,19 +29,19 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 class LottoManualControllerTest {
 
     @Mock
-    private ExecuteLottoUseCase executeLottoUseCase;
+    private LottoUseCase lottoUseCase;
 
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new LottoManualController(executeLottoUseCase)).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(new LottoManualController(lottoUseCase)).build();
     }
 
     @Test
     void shouldExecuteCheckWithPost() throws Exception {
         LottoExecution execution = new LottoExecution(
-                TaskMode.CHECK_ONLY,
+                TaskMode.CHECK,
                 TriggerType.MANUAL,
                 ExecutionStatus.SUCCESS,
                 Instant.parse("2026-02-23T00:00:00Z"),
@@ -50,15 +51,14 @@ class LottoManualControllerTest {
                 2,
                 0
         );
-        when(executeLottoUseCase.execute(argThat(command ->
-                command.mode() == TaskMode.CHECK_ONLY
-                        && command.trigger() == TriggerType.MANUAL
-                        && command.userIds() == null
+        when(lottoUseCase.check(argThat(command ->
+                command.trigger() == TriggerType.MANUAL
+                        && command.userIds().isEmpty()
         ))).thenReturn(execution);
 
         mockMvc.perform(post("/api/lotto/check"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.mode").value("CHECK_ONLY"))
+                .andExpect(jsonPath("$.mode").value("CHECK"))
                 .andExpect(jsonPath("$.trigger").value("MANUAL"))
                 .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.totalUsers").value(2))
@@ -74,7 +74,7 @@ class LottoManualControllerTest {
     @Test
     void shouldExecuteBuyWithPost() throws Exception {
         LottoExecution execution = new LottoExecution(
-                TaskMode.BUY_AND_CHECK,
+                TaskMode.PURCHASE,
                 TriggerType.MANUAL,
                 ExecutionStatus.PARTIAL_FAILURE,
                 Instant.parse("2026-02-23T00:00:00Z"),
@@ -84,15 +84,14 @@ class LottoManualControllerTest {
                 1,
                 1
         );
-        when(executeLottoUseCase.execute(argThat(command ->
-                command.mode() == TaskMode.BUY_AND_CHECK
-                        && command.trigger() == TriggerType.MANUAL
-                        && command.userIds() == null
+        when(lottoUseCase.purchase(argThat(command ->
+                command.trigger() == TriggerType.MANUAL
+                        && command.userIds().isEmpty()
         ))).thenReturn(execution);
 
         mockMvc.perform(post("/api/lotto/buy"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.mode").value("BUY_AND_CHECK"))
+                .andExpect(jsonPath("$.mode").value("PURCHASE"))
                 .andExpect(jsonPath("$.status").value("PARTIAL_FAILURE"))
                 .andExpect(jsonPath("$.successUsers").value(1))
                 .andExpect(jsonPath("$.failedUsers").value(1));
@@ -101,7 +100,7 @@ class LottoManualControllerTest {
     @Test
     void shouldExecuteCheckForSpecificUser() throws Exception {
         LottoExecution execution = new LottoExecution(
-                TaskMode.CHECK_ONLY,
+                TaskMode.CHECK,
                 TriggerType.MANUAL,
                 ExecutionStatus.SUCCESS,
                 Instant.parse("2026-02-23T00:00:00Z"),
@@ -111,22 +110,21 @@ class LottoManualControllerTest {
                 1,
                 0
         );
-        when(executeLottoUseCase.execute(argThat(command ->
-                command.mode() == TaskMode.CHECK_ONLY
-                        && command.trigger() == TriggerType.MANUAL
+        when(lottoUseCase.check(argThat(command ->
+                command.trigger() == TriggerType.MANUAL
                         && List.of("user1").equals(command.userIds())
         ))).thenReturn(execution);
 
         mockMvc.perform(post("/api/lotto/check").param("userId", "user1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.mode").value("CHECK_ONLY"))
+                .andExpect(jsonPath("$.mode").value("CHECK"))
                 .andExpect(jsonPath("$.totalUsers").value(1))
                 .andExpect(jsonPath("$.successUsers").value(1));
     }
 
     @Test
     void shouldReturnBadRequestForInvalidUserSelection() throws Exception {
-        when(executeLottoUseCase.execute(any()))
+        when(lottoUseCase.purchase(any(TargetCommand.class)))
                 .thenThrow(new InvalidManualUserSelectionException(List.of("missing-user"), List.of("user1", "user2")));
 
         mockMvc.perform(post("/api/lotto/buy").param("userId", "missing-user"))

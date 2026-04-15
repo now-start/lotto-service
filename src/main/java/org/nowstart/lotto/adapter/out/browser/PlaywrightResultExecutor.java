@@ -6,6 +6,7 @@ import com.microsoft.playwright.options.LoadState;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.nowstart.lotto.application.port.out.LottoAutomationPort.CheckResult;
 import org.nowstart.lotto.domain.model.LottoResult;
 import org.springframework.resilience.annotation.Retryable;
 import org.springframework.stereotype.Component;
@@ -19,7 +20,7 @@ public class PlaywrightResultExecutor {
             maxRetriesString = "${lotto.max-retries:3}",
             delayString = "${lotto.retry-delay-ms:2000}"
     )
-    public List<LottoResult> check(Page page) {
+    public List<CheckResult> check(Page page) {
         log.info("[Check] Start");
         page.navigate(LottoBrowserConstants.RESULT_TABLE);
         page.waitForLoadState(LoadState.NETWORKIDLE);
@@ -31,7 +32,7 @@ public class PlaywrightResultExecutor {
             return List.of();
         }
 
-        List<LottoResult> results = new ArrayList<>();
+        List<CheckResult> results = new ArrayList<>();
         for (int index = 0; index < rowCount; index++) {
             try {
                 Locator row = rows.nth(index);
@@ -50,7 +51,7 @@ public class PlaywrightResultExecutor {
         return results;
     }
 
-    private LottoResult extractResult(Page page, Locator row) {
+    private CheckResult extractResult(Page page, Locator row) {
         Locator numberLocator = row.locator(LottoBrowserConstants.RESULT_COL_NUMBER);
         numberLocator.click();
 
@@ -59,15 +60,16 @@ public class PlaywrightResultExecutor {
         byte[] imageBytes = modalLocator.screenshot();
         page.click(LottoBrowserConstants.CLOSE_DETAIL_BTN);
 
-        return new LottoResult(
+        LottoResult result = new LottoResult(
                 row.locator(LottoBrowserConstants.RESULT_COL_DATE1).innerText().trim(),
                 row.locator(LottoBrowserConstants.RESULT_COL_ROUND).innerText().trim(),
                 row.locator(LottoBrowserConstants.RESULT_COL_NAME).innerText().trim(),
                 numberLocator.innerText().trim().replace(" ", ""),
                 row.locator(LottoBrowserConstants.RESULT_COL_COUNT).innerText().trim(),
                 row.locator(LottoBrowserConstants.RESULT_COL_RESULT).innerText().trim(),
-                row.locator(LottoBrowserConstants.RESULT_COL_PRICE).innerText().trim(),
-                imageBytes
+                row.locator(LottoBrowserConstants.RESULT_COL_PRICE).innerText().trim()
         );
+
+        return new CheckResult(result, imageBytes);
     }
 }

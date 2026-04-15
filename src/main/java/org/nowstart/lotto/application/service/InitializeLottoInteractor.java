@@ -2,7 +2,6 @@ package org.nowstart.lotto.application.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.nowstart.lotto.application.dto.InitializeLottoCommand;
 import org.nowstart.lotto.application.port.in.InitializeLottoUseCase;
 import org.nowstart.lotto.application.port.out.LoadLottoUsersPort;
 import org.nowstart.lotto.application.port.out.LottoAutomationPort;
@@ -23,7 +22,7 @@ public class InitializeLottoInteractor implements InitializeLottoUseCase {
     private final LottoNotificationFactory lottoNotificationFactory;
 
     @Override
-    public void initialize(InitializeLottoCommand command) {
+    public void initialize() {
         for (LottoUser user : loadLottoUsersPort.loadUsers()) {
             if (!user.init()) {
                 log.info("[Init][{}] Skip", user.id());

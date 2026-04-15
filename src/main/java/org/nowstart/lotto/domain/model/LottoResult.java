@@ -9,8 +9,7 @@ public record LottoResult(
         String number,
         String count,
         String result,
-        String price,
-        byte[] imageBytes
+        String price
 ) {
     public String summary() {
         MessageType messageType = MessageType.of(result);

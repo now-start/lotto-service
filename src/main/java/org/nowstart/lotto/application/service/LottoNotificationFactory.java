@@ -1,7 +1,9 @@
 package org.nowstart.lotto.application.service;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import org.nowstart.lotto.application.port.out.LottoAutomationPort.CheckResult;
 import org.nowstart.lotto.domain.model.LottoAccountSnapshot;
 import org.nowstart.lotto.domain.model.LottoResult;
 import org.nowstart.lotto.domain.model.LottoUser;
@@ -10,20 +12,23 @@ import org.nowstart.lotto.domain.type.TaskMode;
 
 public class LottoNotificationFactory {
 
-    public Optional<NotificationMessage> createSuccessMessage(
+    public Optional<NotificationMessage> createCheckSuccessMessage(
             LottoUser user,
             LottoAccountSnapshot accountSnapshot,
-            List<LottoResult> results
+            List<CheckResult> results
     ) {
         if (results.isEmpty()) {
             return Optional.empty();
         }
 
-        LottoResult latestResult = results.getFirst();
+        CheckResult latestCheckResult = results.stream()
+                .max(Comparator.comparingInt(this::roundNumber))
+                .orElseThrow();
+        var latestResult = latestCheckResult.result();
         return Optional.of(new NotificationMessage(
                 "[" + user.id() + "] " + latestResult.summary(),
-                accountSnapshot.asNotificationText(),
-                latestResult.imageBytes(),
+                createResultMessageText(accountSnapshot, latestResult),
+                latestCheckResult.detailImage(),
                 user.email()
         ));
     }
@@ -57,5 +62,32 @@ public class LottoNotificationFactory {
                 null,
                 user.email()
         );
+    }
+
+    private String createResultMessageText(LottoAccountSnapshot accountSnapshot, LottoResult result) {
+        return """
+                %s
+                
+                일자: %s
+                회차: %s
+                게임: %s
+                번호: %s
+                수량: %s
+                결과: %s
+                금액: %s
+                """.formatted(
+                accountSnapshot.asNotificationText(),
+                result.date(),
+                result.round(),
+                result.name(),
+                result.number(),
+                result.count(),
+                result.result(),
+                result.price()
+        );
+    }
+
+    private int roundNumber(CheckResult checkResult) {
+        return Integer.parseInt(checkResult.result().round());
     }
 }

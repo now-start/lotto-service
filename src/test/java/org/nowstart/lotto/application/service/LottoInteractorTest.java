@@ -16,11 +16,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.nowstart.lotto.application.dto.CheckLottoCommand;
-import org.nowstart.lotto.application.dto.PurchaseLottoCommand;
-import org.nowstart.lotto.application.model.LottoCheckResult;
+import org.nowstart.lotto.application.port.in.LottoUseCase.TargetCommand;
 import org.nowstart.lotto.application.port.out.LoadLottoUsersPort;
 import org.nowstart.lotto.application.port.out.LottoAutomationPort;
+import org.nowstart.lotto.application.port.out.LottoAutomationPort.CheckResult;
 import org.nowstart.lotto.application.port.out.LottoAutomationSession;
 import org.nowstart.lotto.application.port.out.SendNotificationPort;
 import org.nowstart.lotto.domain.exception.InvalidManualUserSelectionException;
@@ -76,7 +75,7 @@ class LottoInteractorTest {
         when(lottoNotificationFactory.createCheckSuccessMessage(any(), any(), any()))
                 .thenReturn(Optional.of(message));
 
-        LottoExecution result = lottoInteractor.check(new CheckLottoCommand(TriggerType.MANUAL, null));
+        LottoExecution result = lottoInteractor.check(new TargetCommand(TriggerType.MANUAL, null));
 
         assertThat(result.mode()).isEqualTo(TaskMode.CHECK);
         assertThat(result.trigger()).isEqualTo(TriggerType.MANUAL);
@@ -111,7 +110,7 @@ class LottoInteractorTest {
                 .thenReturn(failureMessage);
 
         LottoExecution result = lottoInteractor.purchase(
-                new PurchaseLottoCommand(TriggerType.SCHEDULE, List.of("user1", "user2"))
+                new TargetCommand(TriggerType.SCHEDULE, List.of("user1", "user2"))
         );
 
         assertThat(result.mode()).isEqualTo(TaskMode.PURCHASE);
@@ -131,7 +130,7 @@ class LottoInteractorTest {
     void shouldThrowWhenInvalidUserIdIncluded() {
         when(loadLottoUsersPort.loadUsers()).thenReturn(List.of(createUser("user1"), createUser("user2")));
 
-        assertThatThrownBy(() -> lottoInteractor.check(new CheckLottoCommand(TriggerType.MANUAL, List.of("missing"))))
+        assertThatThrownBy(() -> lottoInteractor.check(new TargetCommand(TriggerType.MANUAL, List.of("missing"))))
                 .isInstanceOf(InvalidManualUserSelectionException.class)
                 .satisfies(exception -> {
                     InvalidManualUserSelectionException invalid = (InvalidManualUserSelectionException) exception;
@@ -144,8 +143,8 @@ class LottoInteractorTest {
         return new LottoUser(id, "password", 1, id + "@nowstart.org", false);
     }
 
-    private LottoCheckResult createCheckResult() {
-        return new LottoCheckResult(
+    private CheckResult createCheckResult() {
+        return new CheckResult(
                 new LottoResult("2026-01-01", "1000", "로또", "1,2,3,4,5,6", "1", "당첨", "5000"),
                 new byte[] {1}
         );

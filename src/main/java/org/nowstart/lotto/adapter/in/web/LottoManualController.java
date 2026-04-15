@@ -7,10 +7,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.nowstart.lotto.adapter.in.web.response.LottoExecutionResponse;
 import org.nowstart.lotto.adapter.in.web.response.ManualExecutionErrorResponse;
-import org.nowstart.lotto.application.dto.ExecuteLottoCommand;
-import org.nowstart.lotto.application.port.in.ExecuteLottoUseCase;
+import org.nowstart.lotto.application.port.in.LottoUseCase;
+import org.nowstart.lotto.application.port.in.LottoUseCase.TargetCommand;
 import org.nowstart.lotto.domain.exception.InvalidManualUserSelectionException;
-import org.nowstart.lotto.domain.type.TaskMode;
 import org.nowstart.lotto.domain.type.TriggerType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Lotto Manual", description = "로또 수동 실행 API")
 public class LottoManualController {
 
-    private final ExecuteLottoUseCase executeLottoUseCase;
+    private final LottoUseCase lottoUseCase;
 
     @Operation(
             summary = "로또 결과 확인",
@@ -39,13 +38,13 @@ public class LottoManualController {
     ) {
         log.info("[Manual] Check request received userIds={}", userIds);
         return LottoExecutionResponse.from(
-                executeLottoUseCase.execute(new ExecuteLottoCommand(TaskMode.CHECK_ONLY, TriggerType.MANUAL, userIds))
+                lottoUseCase.check(new TargetCommand(TriggerType.MANUAL, userIds))
         );
     }
 
     @Operation(
             summary = "로또 구매",
-            description = "로또를 수동으로 구매하고 결과를 확인합니다. userId를 지정하면 해당 유저만 실행하고, 없으면 전체 유저를 실행합니다."
+            description = "로또를 수동으로 구매한 뒤 구매 내역을 확인하고 번호를 메일로 전달합니다. userId를 지정하면 해당 유저만 실행하고, 없으면 전체 유저를 실행합니다."
     )
     @PostMapping("/buy")
     public LottoExecutionResponse buyLottoTickets(
@@ -53,7 +52,7 @@ public class LottoManualController {
     ) {
         log.info("[Manual] Buy request received userIds={}", userIds);
         return LottoExecutionResponse.from(
-                executeLottoUseCase.execute(new ExecuteLottoCommand(TaskMode.BUY_AND_CHECK, TriggerType.MANUAL, userIds))
+                lottoUseCase.purchase(new TargetCommand(TriggerType.MANUAL, userIds))
         );
     }
 
