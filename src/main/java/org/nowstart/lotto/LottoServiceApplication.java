@@ -12,7 +12,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @ConfigurationPropertiesScan
 public class LottoServiceApplication {
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         SpringApplication.run(LottoServiceApplication.class, args);
     }
 }
