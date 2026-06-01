@@ -7,8 +7,8 @@ import org.nowstart.lotto.application.port.out.LoadLottoUsersPort;
 import org.nowstart.lotto.application.port.out.LottoAutomationPort;
 import org.nowstart.lotto.application.port.out.LottoAutomationSession;
 import org.nowstart.lotto.application.port.out.SendNotificationPort;
-import org.nowstart.lotto.domain.model.LottoAccountSnapshot;
-import org.nowstart.lotto.domain.model.LottoUser;
+import org.nowstart.lotto.application.port.out.LottoAutomationPort.LottoAccountSnapshot;
+import org.nowstart.lotto.application.port.out.LoadLottoUsersPort.LottoUser;
 import org.springframework.stereotype.Service;
 
 @Slf4j

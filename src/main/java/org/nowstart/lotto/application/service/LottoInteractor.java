@@ -8,18 +8,18 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.nowstart.lotto.application.port.in.LottoUseCase;
-import org.nowstart.lotto.application.port.in.LottoUseCase.TargetCommand;
 import org.nowstart.lotto.application.port.out.LoadLottoUsersPort;
 import org.nowstart.lotto.application.port.out.LottoAutomationPort;
 import org.nowstart.lotto.application.port.out.LottoAutomationPort.CheckResult;
+import org.nowstart.lotto.application.port.out.LottoAutomationPort.PurchaseReceipt;
 import org.nowstart.lotto.application.port.out.LottoAutomationSession;
 import org.nowstart.lotto.application.port.out.SendNotificationPort;
 import org.nowstart.lotto.domain.exception.InvalidManualUserSelectionException;
 import org.nowstart.lotto.domain.exception.LottoAutomationException;
-import org.nowstart.lotto.domain.model.LottoAccountSnapshot;
-import org.nowstart.lotto.domain.model.LottoExecution;
-import org.nowstart.lotto.domain.model.LottoUser;
-import org.nowstart.lotto.domain.model.NotificationMessage;
+import org.nowstart.lotto.application.port.out.LottoAutomationPort.LottoAccountSnapshot;
+import org.nowstart.lotto.application.port.in.LottoUseCase.LottoExecution;
+import org.nowstart.lotto.application.port.out.LoadLottoUsersPort.LottoUser;
+import org.nowstart.lotto.application.port.out.SendNotificationPort.NotificationMessage;
 import org.nowstart.lotto.domain.type.ExecutionStatus;
 import org.nowstart.lotto.domain.type.StepType;
 import org.nowstart.lotto.domain.type.TaskMode;
@@ -94,14 +94,23 @@ public class LottoInteractor implements LottoUseCase {
             LottoAccountSnapshot accountSnapshot = runStep(StepType.LOGIN, user,
                     () -> lottoAutomationPort.login(session, user));
 
+            List<CheckResult> results;
             if (mode == TaskMode.PURCHASE) {
-                runStep(StepType.PURCHASE, user, () -> {
-                    lottoAutomationPort.buy(session, user);
-                    return null;
-                });
+                PurchaseReceipt purchaseReceipt = runStep(
+                        StepType.PURCHASE,
+                        user,
+                        () -> lottoAutomationPort.buy(session, user)
+                );
+                CheckResult latestPurchaseResult = runStep(
+                        StepType.CHECK,
+                        user,
+                        () -> lottoAutomationPort.check(session, purchaseReceipt)
+                );
+                results = List.of(latestPurchaseResult);
+            } else {
+                results = runStep(StepType.CHECK, user, () -> lottoAutomationPort.check(session));
             }
 
-            List<CheckResult> results = runStep(StepType.CHECK, user, () -> lottoAutomationPort.check(session));
             lottoNotificationFactory.createCheckSuccessMessage(user, accountSnapshot, results)
                     .ifPresent(message -> sendNotification(user, message, "success"));
 

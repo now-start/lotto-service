@@ -17,12 +17,6 @@ org.nowstart.lotto
 │  ├─ PlaywrightConfig                                            [class, @Configuration]
 │  └─ SwaggerConfig                                               [class, @Configuration]
 ├─ domain
-│  ├─ model
-│  │  ├─ LottoUser                                                [record]
-│  │  ├─ LottoAccountSnapshot                                     [record]
-│  │  ├─ LottoResult                                              [record]
-│  │  ├─ LottoExecution                                           [record]
-│  │  └─ NotificationMessage                                      [record]
 │  ├─ type
 │  │  ├─ ExecutionStatus                                          [enum]
 │  │  ├─ MessageType                                              [enum]
@@ -36,13 +30,13 @@ org.nowstart.lotto
 ├─ application
 │  ├─ port
 │  │  ├─ in
-│  │  │  ├─ LottoUseCase                                          [interface + TargetCommand]
+│  │  │  ├─ LottoUseCase                                          [interface + TargetCommand + LottoExecution]
 │  │  │  └─ InitializeLottoUseCase                                [interface, initialize()]
 │  │  └─ out
-│  │     ├─ LoadLottoUsersPort                                    [interface]
-│  │     ├─ LottoAutomationPort                                   [interface + CheckResult]
+│  │     ├─ LoadLottoUsersPort                                    [interface + LottoUser]
+│  │     ├─ LottoAutomationPort                                   [interface + LottoAccountSnapshot + LottoResult + CheckResult + PurchaseReceipt]
 │  │     ├─ LottoAutomationSession                                [interface]
-│  │     └─ SendNotificationPort                                  [interface]
+│  │     └─ SendNotificationPort                                  [interface + NotificationMessage]
 │  └─ service
 │     ├─ InitializeLottoInteractor                                [class, @Service]
 │     ├─ LottoInteractor                                          [class, @Service]
@@ -92,7 +86,7 @@ flowchart LR
 
   subgraph INPORTS["Application In Ports"]
     direction TB
-    LOTTOIN["application.port.in.LottoUseCase<br/>interface + TargetCommand<br/>check(command)<br/>purchase(command)"]:::app
+    LOTTOIN["application.port.in.LottoUseCase<br/>interface + TargetCommand/LottoExecution<br/>check(command)<br/>purchase(command)"]:::app
     INITIN["application.port.in.InitializeLottoUseCase<br/>interface"]:::app
   end
 
@@ -105,10 +99,10 @@ flowchart LR
 
   subgraph OUTPORTS["Application Out Ports"]
     direction TB
-    USERPORT["application.port.out.LoadLottoUsersPort<br/>interface"]:::app
-    AUTOPORT["application.port.out.LottoAutomationPort<br/>interface<br/>nested CheckResult class<br/>login(session,user)<br/>buy(session,user)<br/>check(session)"]:::app
+    USERPORT["application.port.out.LoadLottoUsersPort<br/>interface + LottoUser"]:::app
+    AUTOPORT["application.port.out.LottoAutomationPort<br/>interface<br/>nested LottoAccountSnapshot/LottoResult/CheckResult/PurchaseReceipt<br/>login(session,user)<br/>buy(session,user)<br/>check(session)<br/>check(session,receipt)"]:::app
     SESSIONPORT["application.port.out.LottoAutomationSession<br/>interface"]:::app
-    NOTIPORT["application.port.out.SendNotificationPort<br/>interface"]:::app
+    NOTIPORT["application.port.out.SendNotificationPort<br/>interface + NotificationMessage"]:::app
   end
 
   subgraph OUTBOUND["Outbound Adapters"]
@@ -134,7 +128,6 @@ flowchart LR
 
   subgraph DOMAIN["Domain"]
     direction TB
-    LOTTOEXEC["domain.model.LottoExecution<br/>record"]:::domain
     MODE["domain.type.TaskMode<br/>enum CHECK/PURCHASE"]:::domain
     TRIGGER["domain.type.TriggerType<br/>enum"]:::domain
     STEP["domain.type.StepType<br/>enum LOGIN/CHECK/PURCHASE"]:::domain
@@ -151,7 +144,7 @@ flowchart LR
   LOTTOUC --> AUTOPORT
   LOTTOUC --> NOTIPORT
   LOTTOUC --> FACTORY
-  LOTTOUC --> LOTTOEXEC
+  LOTTOUC --> LOTTOIN
   LOTTOUC --> MODE
   LOTTOUC --> TRIGGER
   LOTTOUC --> STEP
@@ -196,8 +189,9 @@ Controller / Scheduler (Adapter In)
 - `LottoInteractor` 가 유저 선택, 배치 실행, step 호출, 알림 처리까지 담당
 - `login`, `check`, `buy` 는 내부 자동화 step 으로만 사용
 
-추가로 `purchase` 는 내부적으로 `login -> buy -> check` 순서로 동작하며, 구매 후 조회된 최신 로또 번호를 메일로 전달한다.
-`LottoResult` 는 순수 결과 값만 들고, 스크린샷은 `application.port.out.LottoAutomationPort.CheckResult` 내부로 한정되어 메일 생성에만 사용한다.
+추가로 `purchase` 는 내부적으로 `login -> buy -> check(session, receipt)` 순서로 동작한다.
+구매 후 조회는 구매 수량과 상태가 일치하는 최신 구매 row 만 메일 대상으로 삼아, 직전 회차 스크린샷이 잘못 발송되지 않게 한다.
+`LottoResult` 는 순수 결과 값만 들고, 스크린샷과 구매 조회용 영수증 값은 `application.port.out.LottoAutomationPort` 내부 값으로 한정되어 메일 생성과 자동화 포트 계약에만 사용한다.
 
 ## Spring Annotation Rules
 

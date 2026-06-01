@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.nowstart.lotto.application.port.out.SendNotificationPort;
 import org.nowstart.lotto.domain.exception.NotificationSendException;
-import org.nowstart.lotto.domain.model.NotificationMessage;
+import org.nowstart.lotto.application.port.out.SendNotificationPort.NotificationMessage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;

@@ -4,7 +4,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.nowstart.lotto.application.port.out.LoadLottoUsersPort;
 import org.nowstart.lotto.config.LottoProperties;
-import org.nowstart.lotto.domain.model.LottoUser;
+import org.nowstart.lotto.application.port.out.LoadLottoUsersPort.LottoUser;
 import org.springframework.stereotype.Component;
 
 @Component
