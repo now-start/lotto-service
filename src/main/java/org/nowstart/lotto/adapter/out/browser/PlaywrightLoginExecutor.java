@@ -5,8 +5,8 @@ import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.AriaRole;
 import com.microsoft.playwright.options.LoadState;
 import lombok.extern.slf4j.Slf4j;
-import org.nowstart.lotto.domain.model.LottoAccountSnapshot;
-import org.nowstart.lotto.domain.model.LottoUser;
+import org.nowstart.lotto.application.port.out.LottoAutomationPort.LottoAccountSnapshot;
+import org.nowstart.lotto.application.port.out.LoadLottoUsersPort.LottoUser;
 import org.springframework.resilience.annotation.Retryable;
 import org.springframework.stereotype.Component;
 

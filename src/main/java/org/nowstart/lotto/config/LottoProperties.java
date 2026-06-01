@@ -32,6 +32,16 @@ public class LottoProperties {
     @NotNull(message = "재시도 지연 시간은 필수입니다")
     private Integer retryDelayMs = 2000;
 
+    @Min(value = 1000, message = "구매 결과 대기 시간은 최소 1초여야 합니다")
+    @Max(value = 300000, message = "구매 결과 대기 시간은 최대 5분까지 가능합니다")
+    @NotNull(message = "구매 결과 대기 시간은 필수입니다")
+    private Integer purchaseResultTimeoutMs = 30000;
+
+    @Min(value = 100, message = "구매 결과 폴링 간격은 최소 0.1초여야 합니다")
+    @Max(value = 10000, message = "구매 결과 폴링 간격은 최대 10초까지 가능합니다")
+    @NotNull(message = "구매 결과 폴링 간격은 필수입니다")
+    private Integer purchaseResultPollIntervalMs = 1000;
+
     @Valid
     @NotNull(message = "크론 설정은 필수입니다")
     private Cron cron = new Cron();
@@ -49,7 +59,7 @@ public class LottoProperties {
         @Min(value = 1, message = "구매 수량은 최소 1장이어야 합니다")
         @Max(value = 5, message = "구매 수량은 최대 5장까지 가능합니다")
         @NotNull(message = "구매 수량은 필수입니다")
-        private Integer count;
+        private Integer count = 5;
 
         @Email(message = "올바른 이메일 형식이어야 합니다")
         @NotBlank(message = "알림 수신 이메일은 필수입니다")
@@ -64,9 +74,9 @@ public class LottoProperties {
     public static class Cron {
 
         @NotBlank(message = "로또 확인 크론 표현식은 필수입니다")
-        private String check;
+        private String check = "0 0 22 * * 6";
 
         @NotBlank(message = "로또 구매 크론 표현식은 필수입니다")
-        private String buy;
+        private String buy = "0 0 9 * * 0";
     }
 }

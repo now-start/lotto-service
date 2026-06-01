@@ -4,10 +4,11 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import org.nowstart.lotto.application.port.out.LottoAutomationPort.CheckResult;
-import org.nowstart.lotto.domain.model.LottoAccountSnapshot;
-import org.nowstart.lotto.domain.model.LottoResult;
-import org.nowstart.lotto.domain.model.LottoUser;
-import org.nowstart.lotto.domain.model.NotificationMessage;
+import org.nowstart.lotto.application.port.out.LottoAutomationPort.LottoAccountSnapshot;
+import org.nowstart.lotto.application.port.out.LottoAutomationPort.LottoResult;
+import org.nowstart.lotto.application.port.out.LoadLottoUsersPort.LottoUser;
+import org.nowstart.lotto.application.port.out.SendNotificationPort.NotificationMessage;
+import org.nowstart.lotto.domain.type.MessageType;
 import org.nowstart.lotto.domain.type.TaskMode;
 
 public class LottoNotificationFactory {
@@ -26,7 +27,7 @@ public class LottoNotificationFactory {
                 .orElseThrow();
         var latestResult = latestCheckResult.result();
         return Optional.of(new NotificationMessage(
-                "[" + user.id() + "] " + latestResult.summary(),
+                "[" + user.id() + "] " + summary(latestResult),
                 createResultMessageText(accountSnapshot, latestResult),
                 latestCheckResult.detailImage(),
                 user.email()
@@ -58,7 +59,7 @@ public class LottoNotificationFactory {
     public NotificationMessage createInitializationMessage(LottoUser user, LottoAccountSnapshot accountSnapshot) {
         return new NotificationMessage(
                 "⏳[" + user.id() + "] Lotto Init Test⏳",
-                accountSnapshot.asNotificationText(),
+                accountSnapshotText(accountSnapshot),
                 null,
                 user.email()
         );
@@ -76,7 +77,7 @@ public class LottoNotificationFactory {
                 결과: %s
                 금액: %s
                 """.formatted(
-                accountSnapshot.asNotificationText(),
+                accountSnapshotText(accountSnapshot),
                 result.date(),
                 result.round(),
                 result.name(),
@@ -85,6 +86,15 @@ public class LottoNotificationFactory {
                 result.result(),
                 result.price()
         );
+    }
+
+    private String summary(LottoResult result) {
+        MessageType messageType = MessageType.of(result.result());
+        return messageType.getEmoji() + result.name() + " " + result.round() + "회차" + messageType.getEmoji();
+    }
+
+    private String accountSnapshotText(LottoAccountSnapshot accountSnapshot) {
+        return accountSnapshot.name() + "의 💰예치금 : " + accountSnapshot.deposit();
     }
 
     private int roundNumber(CheckResult checkResult) {
