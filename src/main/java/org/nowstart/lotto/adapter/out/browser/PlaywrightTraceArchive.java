@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.UUID;
 import java.util.stream.StreamSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Component;
 public class PlaywrightTraceArchive {
 
     private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
+    private final Object cleanupMonitor = new Object();
 
     @Value("${logging.file.path:./logs}")
     private String logPath;
@@ -47,7 +49,8 @@ public class PlaywrightTraceArchive {
     public void stop(BrowserContext context) {
         try {
             String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMATTER);
-            Path tracePath = Paths.get(logPath, "lotto-trace-" + timestamp + ".zip");
+            String traceId = UUID.randomUUID().toString().substring(0, 8);
+            Path tracePath = Paths.get(logPath, "lotto-trace-" + timestamp + "-" + traceId + ".zip");
             context.tracing().stop(new Tracing.StopOptions().setPath(tracePath));
             cleanupOldTraceFiles();
         } catch (Exception exception) {
@@ -60,23 +63,25 @@ public class PlaywrightTraceArchive {
     }
 
     private void cleanupOldTraceFiles() throws IOException {
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(logPath), "*.zip")) {
-            StreamSupport.stream(stream.spliterator(), false)
-                    .sorted((first, second) -> {
-                        try {
-                            return Files.getLastModifiedTime(second).compareTo(Files.getLastModifiedTime(first));
-                        } catch (IOException exception) {
-                            return 0;
-                        }
-                    })
-                    .skip(maxTraceFiles)
-                    .forEach(file -> {
-                        try {
-                            Files.delete(file);
-                        } catch (IOException exception) {
-                            throw new RuntimeException(exception);
-                        }
-                    });
+        synchronized (cleanupMonitor) {
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(logPath), "*.zip")) {
+                StreamSupport.stream(stream.spliterator(), false)
+                        .sorted((first, second) -> {
+                            try {
+                                return Files.getLastModifiedTime(second).compareTo(Files.getLastModifiedTime(first));
+                            } catch (IOException exception) {
+                                return 0;
+                            }
+                        })
+                        .skip(maxTraceFiles)
+                        .forEach(file -> {
+                            try {
+                                Files.deleteIfExists(file);
+                            } catch (IOException exception) {
+                                log.warn("오래된 trace 파일 삭제 실패 path={}", file, exception);
+                            }
+                        });
+            }
         }
     }
 }

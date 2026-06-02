@@ -1,27 +1,21 @@
 package org.nowstart.lotto.application.service;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.nowstart.lotto.application.port.in.LottoUseCase;
 import org.nowstart.lotto.application.port.out.LoadLottoUsersPort;
-import org.nowstart.lotto.application.port.out.LottoAutomationPort;
-import org.nowstart.lotto.application.port.out.LottoAutomationPort.CheckResult;
-import org.nowstart.lotto.application.port.out.LottoAutomationPort.PurchaseReceipt;
-import org.nowstart.lotto.application.port.out.LottoAutomationSession;
-import org.nowstart.lotto.application.port.out.SendNotificationPort;
 import org.nowstart.lotto.domain.exception.InvalidManualUserSelectionException;
-import org.nowstart.lotto.domain.exception.LottoAutomationException;
-import org.nowstart.lotto.application.port.out.LottoAutomationPort.LottoAccountSnapshot;
 import org.nowstart.lotto.application.port.in.LottoUseCase.LottoExecution;
 import org.nowstart.lotto.application.port.out.LoadLottoUsersPort.LottoUser;
-import org.nowstart.lotto.application.port.out.SendNotificationPort.NotificationMessage;
 import org.nowstart.lotto.domain.type.ExecutionStatus;
-import org.nowstart.lotto.domain.type.StepType;
 import org.nowstart.lotto.domain.type.TaskMode;
 import org.nowstart.lotto.domain.type.TriggerType;
 import org.springframework.stereotype.Service;
@@ -32,9 +26,7 @@ import org.springframework.stereotype.Service;
 public class LottoInteractor implements LottoUseCase {
 
     private final LoadLottoUsersPort loadLottoUsersPort;
-    private final LottoAutomationPort lottoAutomationPort;
-    private final SendNotificationPort sendNotificationPort;
-    private final LottoNotificationFactory lottoNotificationFactory;
+    private final LottoUserRunner lottoUserRunner;
 
     @Override
     public LottoExecution check(TargetCommand command) {
@@ -54,15 +46,9 @@ public class LottoInteractor implements LottoUseCase {
         Instant startedAt = Instant.now();
         long startedNano = System.nanoTime();
 
-        int successUsers = 0;
-        int failedUsers = 0;
-        for (LottoUser user : targetUsers) {
-            if (runUser(user, mode)) {
-                successUsers++;
-            } else {
-                failedUsers++;
-            }
-        }
+        UserExecutionCounts userExecutionCounts = runUsers(targetUsers, mode);
+        int successUsers = userExecutionCounts.successUsers();
+        int failedUsers = userExecutionCounts.failedUsers();
 
         Instant endedAt = Instant.now();
         long durationMs = (System.nanoTime() - startedNano) / 1_000_000;
@@ -87,44 +73,48 @@ public class LottoInteractor implements LottoUseCase {
         return execution;
     }
 
-    private boolean runUser(LottoUser user, TaskMode mode) {
-        try (LottoAutomationSession session = lottoAutomationPort.openSession()) {
-            log.info("[Task][{}] Start mode={}", user.id(), mode);
-
-            LottoAccountSnapshot accountSnapshot = runStep(StepType.LOGIN, user,
-                    () -> lottoAutomationPort.login(session, user));
-
-            List<CheckResult> results;
-            if (mode == TaskMode.PURCHASE) {
-                PurchaseReceipt purchaseReceipt = runStep(
-                        StepType.PURCHASE,
-                        user,
-                        () -> lottoAutomationPort.buy(session, user)
-                );
-                CheckResult latestPurchaseResult = runStep(
-                        StepType.CHECK,
-                        user,
-                        () -> lottoAutomationPort.check(session, purchaseReceipt)
-                );
-                results = List.of(latestPurchaseResult);
-            } else {
-                results = runStep(StepType.CHECK, user, () -> lottoAutomationPort.check(session));
+    private UserExecutionCounts runUsers(List<LottoUser> targetUsers, TaskMode mode) {
+        List<UserTask> userTasks = new ArrayList<>();
+        try {
+            for (LottoUser user : targetUsers) {
+                userTasks.add(new UserTask(user, lottoUserRunner.runAsync(user, mode)));
             }
 
-            lottoNotificationFactory.createCheckSuccessMessage(user, accountSnapshot, results)
-                    .ifPresent(message -> sendNotification(user, message, "success"));
+            int successUsers = 0;
+            int failedUsers = 0;
+            for (UserTask userTask : userTasks) {
+                if (joinUserTask(userTask, mode)) {
+                    successUsers++;
+                } else {
+                    failedUsers++;
+                }
+            }
+            return new UserExecutionCounts(successUsers, failedUsers);
+        } catch (Error error) {
+            cancelRemaining(userTasks);
+            throw error;
+        }
+    }
 
-            log.info("[Task][{}] Success mode={} deposit={}", user.id(), mode, accountSnapshot.deposit());
-            return true;
-        } catch (LottoAutomationException exception) {
-            log.error("[Task][{}] Failed mode={} step={}", user.id(), mode, exception.getStepType(), exception);
-            sendNotification(user, lottoNotificationFactory.createFailureMessage(user, mode, exception), "failure");
-            return false;
-        } catch (Exception exception) {
-            log.error("[Task][{}] Failed mode={} step=unknown", user.id(), mode, exception);
-            sendNotification(user, lottoNotificationFactory.createFailureMessage(user, mode, exception), "failure");
+    private boolean joinUserTask(UserTask userTask, TaskMode mode) {
+        try {
+            return userTask.future().join();
+        } catch (CompletionException exception) {
+            Throwable cause = exception.getCause();
+            if (cause instanceof Error error) {
+                throw error;
+            }
+            log.error("[Task][{}] Failed mode={} step=async", userTask.user().id(), mode,
+                    cause == null ? exception : cause);
             return false;
         }
+    }
+
+    private void cancelRemaining(List<UserTask> userTasks) {
+        userTasks.stream()
+                .map(UserTask::future)
+                .filter(future -> !future.isDone())
+                .forEach(future -> future.cancel(true));
     }
 
     private List<LottoUser> resolveTargetUsers(List<String> requestedUserIds) {
@@ -154,28 +144,9 @@ public class LottoInteractor implements LottoUseCase {
                 .toList();
     }
 
-    private void sendNotification(LottoUser user, NotificationMessage message, String kind) {
-        try {
-            sendNotificationPort.send(message);
-            log.info("[Notify][{}] {} notification sent", user.id(), kind);
-        } catch (Exception notificationError) {
-            log.error("[Notify][{}] {} notification failed", user.id(), kind, notificationError);
-        }
+    private record UserTask(LottoUser user, CompletableFuture<Boolean> future) {
     }
 
-    private <T> T runStep(StepType stepType, LottoUser user, StepAction<T> action) {
-        try {
-            return action.run();
-        } catch (LottoAutomationException exception) {
-            throw exception;
-        } catch (Exception exception) {
-            throw new LottoAutomationException(stepType, user.id(), exception);
-        }
-    }
-
-    @FunctionalInterface
-    private interface StepAction<T> {
-
-        T run();
+    private record UserExecutionCounts(int successUsers, int failedUsers) {
     }
 }

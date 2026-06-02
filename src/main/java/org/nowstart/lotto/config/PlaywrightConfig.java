@@ -1,8 +1,7 @@
 package org.nowstart.lotto.config;
 
-import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserType;
-import com.microsoft.playwright.Playwright;
+import java.util.function.Supplier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -10,13 +9,7 @@ import org.springframework.context.annotation.Configuration;
 public class PlaywrightConfig {
 
     @Bean
-    public Playwright playwright() {
-        return Playwright.create();
-    }
-
-    @Bean
-    public Browser browser(Playwright playwright) {
-        return playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
+    public Supplier<BrowserType.LaunchOptions> browserLaunchOptions() {
+        return () -> new BrowserType.LaunchOptions().setHeadless(true);
     }
 }
-
