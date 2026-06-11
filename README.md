@@ -54,4 +54,3 @@ services:
 - 스케줄러는 고정 `@Scheduled`가 아닌 동적 Trigger 방식으로 동작하여 refresh 이후 변경된 cron을 다음 실행 계산부터 사용합니다.
 - Actuator refresh endpoint 노출:
     - `POST /actuator/refresh`
-    - `POST /actuator/busrefresh`
