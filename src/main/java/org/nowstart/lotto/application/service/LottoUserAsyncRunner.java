@@ -87,11 +87,18 @@ public class LottoUserAsyncRunner implements LottoUserRunner {
             return false;
         }
 
-        lottoNotificationFactory.createCheckSuccessMessage(user, accountSnapshot, results)
-                .ifPresent(message -> sendNotification(user, message, "success"));
-
-        log.info("[Task][{}] Success mode={} deposit={}", user.id(), mode, accountSnapshot.deposit());
-        return true;
+        try {
+            lottoNotificationFactory.createCheckSuccessMessage(user, accountSnapshot, results)
+                    .ifPresent(message -> sendNotification(user, message, "success"));
+            log.info("[Task][{}] Success mode={} deposit={}", user.id(), mode, accountSnapshot.deposit());
+            return true;
+        } catch (Exception exception) {
+            // 성공 메시지 포맷팅(스크랩 데이터 파싱 등) 중 오류가 나도 사용자에게 실패 통지를 보낸다.
+            // (브라우저 작업은 끝났고 세션이 닫혀 permit이 해제된 상태라 통지가 브라우저 슬롯을 점유하지 않는다)
+            log.error("[Task][{}] Failed mode={} step=notify", user.id(), mode, exception);
+            sendNotification(user, lottoNotificationFactory.createFailureMessage(user, mode, exception), "failure");
+            return false;
+        }
     }
 
     /**
