@@ -37,52 +37,37 @@ public class LottoUserAsyncRunner implements LottoUserRunner {
 
     private boolean runUser(LottoUser user, TaskMode mode, AtomicBoolean abortSignal) {
         if (abortSignal.get()) {
+            // 세션을 열기 전이라 브라우저 permit을 잡지 않은 상태 → 바로 통지해도 무방.
             return aborted(user, mode, "작업 시작 전");
         }
+
+        // 브라우저 작업은 try-with-resources 안에서만 수행하고, 통지(SMTP)는 세션이 닫혀 permit이 해제된 뒤에 보낸다.
+        // (성공/실패/중단 통지가 브라우저 슬롯을 붙잡아 다른 사용자가 세마포어에서 대기하는 것을 방지)
+        LottoAccountSnapshot accountSnapshot = null;
+        List<CheckResult> results = null;
+        String abortPhase = null;
         try (LottoAutomationSession session = lottoAutomationPort.openSession()) {
-            // 세션 확보(세마포어 대기 포함) 이후, 어떤 사이트 조작보다 먼저 취소 여부를 재확인한다.
             if (abortSignal.get()) {
-                return aborted(user, mode, "세션 확보 직후");
-            }
-            log.info("[Task][{}] Start mode={}", user.id(), mode);
-
-            LottoAccountSnapshot accountSnapshot = runStep(StepType.LOGIN, user,
-                    () -> lottoAutomationPort.login(session, user));
-
-            List<CheckResult> results;
-            if (mode == TaskMode.PURCHASE) {
-                Optional<PurchaseReceipt> purchaseReceipt = runStep(
-                        StepType.PURCHASE,
-                        user,
-                        () -> lottoAutomationPort.buy(session, user, abortSignal::get)
-                );
-                if (purchaseReceipt.isEmpty()) {
-                    return aborted(user, mode, "최종 확정 미제출/중단");
-                }
-                CheckResult latestPurchaseResult = runStep(
-                        StepType.CHECK,
-                        user,
-                        () -> lottoAutomationPort.check(session, purchaseReceipt.get())
-                );
-                results = List.of(latestPurchaseResult);
+                abortPhase = "세션 확보 직후";
             } else {
-                results = runStep(StepType.CHECK, user, () -> lottoAutomationPort.check(session));
+                log.info("[Task][{}] Start mode={}", user.id(), mode);
+                accountSnapshot = runStep(StepType.LOGIN, user, () -> lottoAutomationPort.login(session, user));
+
+                if (mode == TaskMode.PURCHASE) {
+                    Optional<PurchaseReceipt> purchaseReceipt = runStep(StepType.PURCHASE, user,
+                            () -> lottoAutomationPort.buy(session, user, abortSignal::get));
+                    if (purchaseReceipt.isEmpty()) {
+                        abortPhase = "최종 확정 미제출/중단";
+                    } else {
+                        results = List.of(runStep(StepType.CHECK, user,
+                                () -> lottoAutomationPort.check(session, purchaseReceipt.get())));
+                    }
+                } else {
+                    results = runStep(StepType.CHECK, user, () -> lottoAutomationPort.check(session));
+                }
             }
-
-            // CHECK가 진행되는 동안 호출자 타임아웃(abort)이 발생했다면, 호출자는 이미 실패로 보고했다.
-            // 취소 불가한 조회 결과에 대해 뒤늦게 성공 통지를 보내 상태 불일치를 만들지 않도록 억제한다.
-            // (PURCHASE는 실제 구매가 성사됐을 수 있으므로 성공 통지를 유지해 사용자가 반드시 알 수 있게 한다.)
-            if (mode == TaskMode.CHECK && abortSignal.get()) {
-                log.warn("[Task][{}] Check completed but aborted meanwhile - suppressing success notification", user.id());
-                return false;
-            }
-
-            lottoNotificationFactory.createCheckSuccessMessage(user, accountSnapshot, results)
-                    .ifPresent(message -> sendNotification(user, message, "success"));
-
-            log.info("[Task][{}] Success mode={} deposit={}", user.id(), mode, accountSnapshot.deposit());
-            return true;
         } catch (LottoAutomationException exception) {
+            // try-with-resources가 세션을 이미 닫음(permit 해제) → 아래 통지가 브라우저 슬롯을 점유하지 않는다.
             log.error("[Task][{}] Failed mode={} step={}", user.id(), mode, exception.getStepType(), exception);
             sendNotification(user, lottoNotificationFactory.createFailureMessage(user, mode, exception), "failure");
             return false;
@@ -91,11 +76,26 @@ public class LottoUserAsyncRunner implements LottoUserRunner {
             sendNotification(user, lottoNotificationFactory.createFailureMessage(user, mode, exception), "failure");
             return false;
         }
+
+        // 여기서부터 세션이 닫혀(permit 해제된) 상태 → 통지는 브라우저 슬롯을 붙잡지 않는다.
+        if (abortPhase != null) {
+            return aborted(user, mode, abortPhase);
+        }
+        if (mode == TaskMode.CHECK && abortSignal.get()) {
+            // CHECK 진행 중 호출자 타임아웃 → 호출자는 이미 실패 보고. 뒤늦은 성공 통지로 상태 불일치를 만들지 않는다.
+            log.warn("[Task][{}] Check completed but aborted meanwhile - suppressing success notification", user.id());
+            return false;
+        }
+
+        lottoNotificationFactory.createCheckSuccessMessage(user, accountSnapshot, results)
+                .ifPresent(message -> sendNotification(user, message, "success"));
+
+        log.info("[Task][{}] Success mode={} deposit={}", user.id(), mode, accountSnapshot.deposit());
+        return true;
     }
 
     /**
-     * 호출자 타임아웃 등으로 실제 작업을 수행하기 전에 중단된 경우의 처리.
-     * PURCHASE는 스케줄 구매가 조용히 누락되지 않도록 예외 경로와 동일한 실패 통지를 보낸다.
+     * 실제 작업 수행 전에 중단된 경우의 처리. PURCHASE는 스케줄 구매가 조용히 누락되지 않도록 실패 통지를 보낸다.
      * CHECK는 조회 미수행이 치명적이지 않으므로 통지하지 않는다(호출자가 이미 타임아웃 실패로 보고).
      */
     private boolean aborted(LottoUser user, TaskMode mode, String phase) {

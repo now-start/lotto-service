@@ -26,11 +26,11 @@ public class PlaywrightPurchaseExecutor {
     /**
      * 주의: 구매는 멱등하지 않으므로 절대 @Retryable을 적용하지 않는다.
      * - 최종 확정 클릭 '직전'까지만 abort를 확인한다(확정 전 중단 시 Optional.empty()).
-     * - 클릭이 실제 '제출'됐는지는 확정 다이얼로그가 닫혔는지로 판정한다(이 사이트는 확정 성공 시 다이얼로그가 닫힘).
-     *   · 닫힘 = 제출됨 → 영수증 반환(호출자가 구매 후 원장 확인으로 최종 검증). 클릭이 응답 지연 등으로 예외를
-     *     던졌더라도 다이얼로그가 닫혔다면 제출된 것으로 본다.
-     *   · 여전히 열림 = actionability 실패 등으로 미제출 → 영수증을 만들지 않는다(안 산 구매가 원장의 옛 행에
-     *     오매칭되어 성공 통지되는 것을 방지).
+     * - 클릭이 정상 반환하면 확정 클릭이 '디스패치'된 것으로 보고, 다이얼로그 닫힘 지연과 무관하게 반드시 영수증을
+     *   반환한다(호출자가 구매 후 원장 확인으로 최종 검증) — 실제 구매를 미검증/미통지로 놓치지 않기 위함.
+     * - 클릭이 예외로 끝난 경우에만 '확정 다이얼로그 닫힘' 휴리스틱으로 제출 여부를 판정한다. 닫혔으면 제출된 것으로
+     *   보고 영수증을 반환하고, 여전히 열려 있으면 actionability 실패 등 미제출로 판단해 영수증을 만들지 않는다
+     *   (안 산 구매가 원장의 옛 미추첨 행에 오매칭되어 성공 통지되는 것을 방지).
      */
     public Optional<PurchaseReceipt> buy(Page page, LottoUser user, BooleanSupplier abortRequested) {
         log.info("[Purchase][{}] Start count={}", user.id(), user.count());
@@ -56,22 +56,25 @@ public class PlaywrightPurchaseExecutor {
             return Optional.empty();
         }
 
-        // 3) 짧은 타임아웃으로 클릭 시도. 예외가 나도 실제 제출 여부는 다이얼로그 상태로 판정한다.
+        // 3) 짧은 타임아웃으로 클릭 시도. 정상 반환하면 클릭이 디스패치된 것으로 본다.
+        boolean clickDispatched = false;
         try {
             finalConfirmButton.click(new Locator.ClickOptions().setTimeout(FINAL_CONFIRM_CLICK_TIMEOUT_MS));
+            clickDispatched = true;
         } catch (PlaywrightException clickException) {
             log.warn("[Purchase][{}] Final confirm click threw (actionability/응답 지연 등) - "
                     + "다이얼로그 상태로 제출 여부 판정", user.id(), clickException);
         }
 
-        // 4) 확정 다이얼로그가 닫혔으면 제출된 것 → 영수증(원장 검증). 여전히 열려 있으면 미제출 → 영수증 없음.
-        if (!confirmDialogClosed(finalConfirmButton)) {
-            log.warn("[Purchase][{}] Final confirm dialog still open - 확정 미제출로 판단, 구매 미수행", user.id());
-            return Optional.empty();
+        // 4) 클릭이 정상 디스패치됐으면 다이얼로그 닫힘 지연과 무관하게 원장 검증(단락 평가로 불필요한 대기 회피).
+        //    예외로 끝났으면 다이얼로그 닫힘 여부로 제출 판정: 닫힘=제출→검증, 열림=미제출→영수증 없음.
+        if (clickDispatched || confirmDialogClosed(finalConfirmButton)) {
+            log.info("[Purchase][{}] Confirmation submitted - proceeding to ledger verification", user.id());
+            return Optional.of(new PurchaseReceipt(user.count(), LocalDate.now(LOTTO_ZONE)));
         }
 
-        log.info("[Purchase][{}] Confirmation submitted (dialog closed) - proceeding to ledger verification", user.id());
-        return Optional.of(new PurchaseReceipt(user.count(), LocalDate.now(LOTTO_ZONE)));
+        log.warn("[Purchase][{}] Final confirm click failed pre-dispatch and dialog still open - 구매 미수행", user.id());
+        return Optional.empty();
     }
 
     private boolean confirmDialogClosed(Locator finalConfirmButton) {
