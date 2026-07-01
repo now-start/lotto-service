@@ -37,14 +37,12 @@ public class LottoUserAsyncRunner implements LottoUserRunner {
 
     private boolean runUser(LottoUser user, TaskMode mode, AtomicBoolean abortSignal) {
         if (abortSignal.get()) {
-            log.warn("[Task][{}] Aborted before start (호출자 타임아웃) mode={}", user.id(), mode);
-            return false;
+            return aborted(user, mode, "작업 시작 전");
         }
         try (LottoAutomationSession session = lottoAutomationPort.openSession()) {
             // 세션 확보(세마포어 대기 포함) 이후, 어떤 사이트 조작보다 먼저 취소 여부를 재확인한다.
             if (abortSignal.get()) {
-                log.warn("[Task][{}] Aborted after acquiring session (호출자 타임아웃) mode={}", user.id(), mode);
-                return false;
+                return aborted(user, mode, "세션 확보 직후");
             }
             log.info("[Task][{}] Start mode={}", user.id(), mode);
 
@@ -53,23 +51,13 @@ public class LottoUserAsyncRunner implements LottoUserRunner {
 
             List<CheckResult> results;
             if (mode == TaskMode.PURCHASE) {
-                // 실결제 직전 abort는 구매 executor(buy) 내부에서 최종 확인한다(Optional.empty = 미수행).
                 Optional<PurchaseReceipt> purchaseReceipt = runStep(
                         StepType.PURCHASE,
                         user,
                         () -> lottoAutomationPort.buy(session, user, abortSignal::get)
                 );
                 if (purchaseReceipt.isEmpty()) {
-                    log.warn("[Task][{}] Aborted before final purchase confirmation (호출자 타임아웃) mode={}",
-                            user.id(), mode);
-                    // 예외 경로와 동일하게 실패 통지를 보낸다 — 스케줄 구매가 조용히 누락되지 않도록.
-                    LottoAutomationException abortException = new LottoAutomationException(
-                            StepType.PURCHASE,
-                            user.id(),
-                            new IllegalStateException("호출자 타임아웃으로 최종 확정 전 구매가 중단되었습니다"));
-                    sendNotification(user,
-                            lottoNotificationFactory.createFailureMessage(user, mode, abortException), "failure");
-                    return false;
+                    return aborted(user, mode, "최종 확정 직전");
                 }
                 CheckResult latestPurchaseResult = runStep(
                         StepType.CHECK,
@@ -79,6 +67,14 @@ public class LottoUserAsyncRunner implements LottoUserRunner {
                 results = List.of(latestPurchaseResult);
             } else {
                 results = runStep(StepType.CHECK, user, () -> lottoAutomationPort.check(session));
+            }
+
+            // CHECK가 진행되는 동안 호출자 타임아웃(abort)이 발생했다면, 호출자는 이미 실패로 보고했다.
+            // 취소 불가한 조회 결과에 대해 뒤늦게 성공 통지를 보내 상태 불일치를 만들지 않도록 억제한다.
+            // (PURCHASE는 실제 구매가 성사됐을 수 있으므로 성공 통지를 유지해 사용자가 반드시 알 수 있게 한다.)
+            if (mode == TaskMode.CHECK && abortSignal.get()) {
+                log.warn("[Task][{}] Check completed but aborted meanwhile - suppressing success notification", user.id());
+                return false;
             }
 
             lottoNotificationFactory.createCheckSuccessMessage(user, accountSnapshot, results)
@@ -95,6 +91,23 @@ public class LottoUserAsyncRunner implements LottoUserRunner {
             sendNotification(user, lottoNotificationFactory.createFailureMessage(user, mode, exception), "failure");
             return false;
         }
+    }
+
+    /**
+     * 호출자 타임아웃 등으로 실제 작업을 수행하기 전에 중단된 경우의 처리.
+     * PURCHASE는 스케줄 구매가 조용히 누락되지 않도록 예외 경로와 동일한 실패 통지를 보낸다.
+     * CHECK는 조회 미수행이 치명적이지 않으므로 통지하지 않는다(호출자가 이미 타임아웃 실패로 보고).
+     */
+    private boolean aborted(LottoUser user, TaskMode mode, String phase) {
+        log.warn("[Task][{}] Aborted ({}) - 호출자 타임아웃 mode={}", user.id(), phase, mode);
+        if (mode == TaskMode.PURCHASE) {
+            LottoAutomationException abortException = new LottoAutomationException(
+                    StepType.PURCHASE,
+                    user.id(),
+                    new IllegalStateException("호출자 타임아웃으로 구매가 중단되었습니다 (" + phase + ")"));
+            sendNotification(user, lottoNotificationFactory.createFailureMessage(user, mode, abortException), "failure");
+        }
+        return false;
     }
 
     private void sendNotification(LottoUser user, NotificationMessage message, String kind) {

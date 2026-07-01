@@ -149,10 +149,19 @@ public class LottoInteractor implements LottoUseCase {
         } catch (TimeoutException exception) {
             // 아직 실행/큐잉 중인 작업에 중단 신호를 보낸다 — 세마포어 대기 중이던 작업이 뒤늦게
             // 실거래(구매)를 수행하는 것을 방지(러너가 구매 직전 abortSignal을 확인한다).
-            // 실제 작업은 백그라운드에서 안전하게 종료되며, in-flight 키는 whenComplete가 해제한다.
+            // 실제 작업은 백그라운드에서 안전하게 종료되며, in-flight 키는 whenComplete가 실제 종료 시 해제한다.
             userTask.abortSignal().set(true);
-            log.error("[Task][{}] Timed out mode={} (제한 {}ms 초과 - 중단 신호 전송, 작업은 안전 지점에서 종료됨)",
-                    userTask.user().id(), mode, lottoProperties.getUserTaskTimeoutMs());
+            if (mode == TaskMode.PURCHASE) {
+                // 최종 확정 이후 타임아웃이면 구매가 성사됐을 수 있어 결과는 '불확실'하다(단정된 실패 아님).
+                // 실제 성사 여부는 백그라운드 원장 확인/메일이 판정하며, in-flight 키가 실제 종료까지 유지되어
+                // 동일 사용자의 중복 구매 실행(수동/스케줄 재시도)을 막는다. 재시도 전 메일/원장으로 확인할 것.
+                log.error("[Task][{}] PURCHASE timed out mode={} (제한 {}ms 초과) - 결과 불확실: "
+                                + "실제 구매 성사 여부는 백그라운드 원장 확인/메일로 판정, 중복 방지 위해 in-flight 키 유지",
+                        userTask.user().id(), mode, lottoProperties.getUserTaskTimeoutMs());
+            } else {
+                log.error("[Task][{}] Timed out mode={} (제한 {}ms 초과 - 중단 신호 전송, 작업은 안전 지점에서 종료됨)",
+                        userTask.user().id(), mode, lottoProperties.getUserTaskTimeoutMs());
+            }
             return false;
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
