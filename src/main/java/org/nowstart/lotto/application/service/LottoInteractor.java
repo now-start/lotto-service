@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.nowstart.lotto.application.port.in.LottoUseCase;
@@ -100,9 +101,10 @@ public class LottoInteractor implements LottoUseCase {
             // per-user 타임아웃 기준점을 '제출 시점'으로 고정한다 — join 시점 기준이면 앞선 hung 사용자를
             // 기다린 시간만큼 뒤 사용자의 제한이 늘어나(N배) 설정값을 크게 초과할 수 있다.
             long deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(lottoProperties.getUserTaskTimeoutMs());
+            AtomicBoolean abortSignal = new AtomicBoolean(false);
             CompletableFuture<Boolean> future;
             try {
-                future = lottoUserRunner.runAsync(user, mode);
+                future = lottoUserRunner.runAsync(user, mode, abortSignal);
             } catch (RuntimeException | Error submitError) {
                 // 제출 실패(프록시/러너 치명 오류 등) 시 키가 남아 이후 실행이 영구 skip되지 않도록 해제 후 전파.
                 inFlightKeys.remove(key);
@@ -110,7 +112,7 @@ public class LottoInteractor implements LottoUseCase {
             }
             // 실제 작업 종료(성공/실패/취소) 시점에만 in-flight 키를 해제한다.
             future.whenComplete((result, error) -> inFlightKeys.remove(key));
-            userTasks.add(new UserTask(user, key, deadlineNanos, future));
+            userTasks.add(new UserTask(user, key, deadlineNanos, abortSignal, future));
         }
 
         try {
@@ -143,23 +145,28 @@ public class LottoInteractor implements LottoUseCase {
                     cause == null ? exception : cause);
             return false;
         } catch (TimeoutException exception) {
-            // 호출자 대기만 종료한다. 실제 작업은 백그라운드에서 계속될 수 있으며,
-            // in-flight 키는 whenComplete가 실제 종료 시 해제하므로 중복 실행은 막힌 상태로 유지된다.
-            log.error("[Task][{}] Timed out mode={} (제한 {}ms 초과, 작업은 백그라운드에서 계속될 수 있음)",
+            // 아직 실행/큐잉 중인 작업에 중단 신호를 보낸다 — 세마포어 대기 중이던 작업이 뒤늦게
+            // 실거래(구매)를 수행하는 것을 방지(러너가 구매 직전 abortSignal을 확인한다).
+            // 실제 작업은 백그라운드에서 안전하게 종료되며, in-flight 키는 whenComplete가 해제한다.
+            userTask.abortSignal().set(true);
+            log.error("[Task][{}] Timed out mode={} (제한 {}ms 초과 - 중단 신호 전송, 작업은 안전 지점에서 종료됨)",
                     userTask.user().id(), mode, lottoProperties.getUserTaskTimeoutMs());
             return false;
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
+            userTask.abortSignal().set(true);
             log.error("[Task][{}] Interrupted mode={}", userTask.user().id(), mode, exception);
             return false;
         }
     }
 
     private void cancelRemaining(List<UserTask> userTasks) {
-        userTasks.stream()
-                .map(UserTask::future)
-                .filter(future -> !future.isDone())
-                .forEach(future -> future.cancel(true));
+        userTasks.forEach(userTask -> {
+            userTask.abortSignal().set(true);
+            if (!userTask.future().isDone()) {
+                userTask.future().cancel(true);
+            }
+        });
     }
 
     private List<LottoUser> resolveTargetUsers(List<String> requestedUserIds) {
@@ -189,7 +196,13 @@ public class LottoInteractor implements LottoUseCase {
                 .toList();
     }
 
-    private record UserTask(LottoUser user, String key, long deadlineNanos, CompletableFuture<Boolean> future) {
+    private record UserTask(
+            LottoUser user,
+            String key,
+            long deadlineNanos,
+            AtomicBoolean abortSignal,
+            CompletableFuture<Boolean> future
+    ) {
     }
 
     private record UserExecutionCounts(int successUsers, int failedUsers, int skippedUsers) {

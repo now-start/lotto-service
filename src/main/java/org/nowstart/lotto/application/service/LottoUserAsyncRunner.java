@@ -2,6 +2,7 @@ package org.nowstart.lotto.application.service;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.nowstart.lotto.application.port.out.LoadLottoUsersPort.LottoUser;
@@ -29,12 +30,21 @@ public class LottoUserAsyncRunner implements LottoUserRunner {
 
     @Async("lottoTaskExecutor")
     @Override
-    public CompletableFuture<Boolean> runAsync(LottoUser user, TaskMode mode) {
-        return CompletableFuture.completedFuture(runUser(user, mode));
+    public CompletableFuture<Boolean> runAsync(LottoUser user, TaskMode mode, AtomicBoolean abortSignal) {
+        return CompletableFuture.completedFuture(runUser(user, mode, abortSignal));
     }
 
-    private boolean runUser(LottoUser user, TaskMode mode) {
+    private boolean runUser(LottoUser user, TaskMode mode, AtomicBoolean abortSignal) {
+        if (abortSignal.get()) {
+            log.warn("[Task][{}] Aborted before start (호출자 타임아웃) mode={}", user.id(), mode);
+            return false;
+        }
         try (LottoAutomationSession session = lottoAutomationPort.openSession()) {
+            // 세션 확보(세마포어 대기 포함) 이후, 어떤 사이트 조작보다 먼저 취소 여부를 재확인한다.
+            if (abortSignal.get()) {
+                log.warn("[Task][{}] Aborted after acquiring session (호출자 타임아웃) mode={}", user.id(), mode);
+                return false;
+            }
             log.info("[Task][{}] Start mode={}", user.id(), mode);
 
             LottoAccountSnapshot accountSnapshot = runStep(StepType.LOGIN, user,
@@ -42,6 +52,11 @@ public class LottoUserAsyncRunner implements LottoUserRunner {
 
             List<CheckResult> results;
             if (mode == TaskMode.PURCHASE) {
+                // 실거래(구매) 직전 최종 확인 — 타임아웃으로 큐잉되었던 작업이 뒤늦게 실구매하는 것을 막는다.
+                if (abortSignal.get()) {
+                    log.warn("[Task][{}] Aborted before purchase (호출자 타임아웃) mode={}", user.id(), mode);
+                    return false;
+                }
                 PurchaseReceipt purchaseReceipt = runStep(
                         StepType.PURCHASE,
                         user,

@@ -2,6 +2,8 @@ package org.nowstart.lotto.application.service;
 
 import static org.assertj.core.api.BDDAssertions.then;
 import static org.assertj.core.api.BDDAssertions.thenThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 
 import java.util.List;
@@ -47,8 +49,8 @@ class LottoInteractorTest {
         LottoUser user1 = createUser("user1");
         LottoUser user2 = createUser("user2");
         given(loadLottoUsersPort.loadUsers()).willReturn(List.of(user1, user2));
-        given(lottoUserRunner.runAsync(user1, TaskMode.CHECK)).willReturn(CompletableFuture.completedFuture(true));
-        given(lottoUserRunner.runAsync(user2, TaskMode.CHECK)).willReturn(CompletableFuture.completedFuture(true));
+        given(lottoUserRunner.runAsync(eq(user1), eq(TaskMode.CHECK), any())).willReturn(CompletableFuture.completedFuture(true));
+        given(lottoUserRunner.runAsync(eq(user2), eq(TaskMode.CHECK), any())).willReturn(CompletableFuture.completedFuture(true));
 
         // 실행: 수동 확인 작업을 실행한다
         LottoExecution result = lottoInteractor.check(new TargetCommand(TriggerType.MANUAL, null));
@@ -60,8 +62,8 @@ class LottoInteractorTest {
         then(result.totalUsers()).isEqualTo(2);
         then(result.successUsers()).isEqualTo(2);
         then(result.failedUsers()).isZero();
-        BDDMockito.then(lottoUserRunner).should().runAsync(user1, TaskMode.CHECK);
-        BDDMockito.then(lottoUserRunner).should().runAsync(user2, TaskMode.CHECK);
+        BDDMockito.then(lottoUserRunner).should().runAsync(eq(user1), eq(TaskMode.CHECK), any());
+        BDDMockito.then(lottoUserRunner).should().runAsync(eq(user2), eq(TaskMode.CHECK), any());
     }
 
     @Test
@@ -71,8 +73,8 @@ class LottoInteractorTest {
         LottoUser user1 = createUser("user1");
         LottoUser user2 = createUser("user2");
         given(loadLottoUsersPort.loadUsers()).willReturn(List.of(user1, user2));
-        given(lottoUserRunner.runAsync(user1, TaskMode.PURCHASE)).willReturn(CompletableFuture.completedFuture(true));
-        given(lottoUserRunner.runAsync(user2, TaskMode.PURCHASE)).willReturn(CompletableFuture.completedFuture(false));
+        given(lottoUserRunner.runAsync(eq(user1), eq(TaskMode.PURCHASE), any())).willReturn(CompletableFuture.completedFuture(true));
+        given(lottoUserRunner.runAsync(eq(user2), eq(TaskMode.PURCHASE), any())).willReturn(CompletableFuture.completedFuture(false));
 
         // 실행: 스케줄 구매 작업을 두 사용자에게 실행한다
         LottoExecution result = lottoInteractor.purchase(
@@ -97,7 +99,7 @@ class LottoInteractorTest {
         CompletableFuture<Boolean> failedFuture = new CompletableFuture<>();
         failedFuture.completeExceptionally(fatalError);
         given(loadLottoUsersPort.loadUsers()).willReturn(List.of(user));
-        given(lottoUserRunner.runAsync(user, TaskMode.CHECK)).willReturn(failedFuture);
+        given(lottoUserRunner.runAsync(eq(user), eq(TaskMode.CHECK), any())).willReturn(failedFuture);
 
         // 실행 및 검증: 치명적 오류는 실패 카운트로 숨기지 않고 호출자에게 전파한다
         thenThrownBy(() -> lottoInteractor.check(new TargetCommand(TriggerType.MANUAL, null)))
@@ -115,8 +117,8 @@ class LottoInteractorTest {
         CompletableFuture<Boolean> waitingFuture = new CompletableFuture<>();
         fatalFuture.completeExceptionally(fatalError);
         given(loadLottoUsersPort.loadUsers()).willReturn(List.of(user1, user2));
-        given(lottoUserRunner.runAsync(user1, TaskMode.CHECK)).willReturn(fatalFuture);
-        given(lottoUserRunner.runAsync(user2, TaskMode.CHECK)).willReturn(waitingFuture);
+        given(lottoUserRunner.runAsync(eq(user1), eq(TaskMode.CHECK), any())).willReturn(fatalFuture);
+        given(lottoUserRunner.runAsync(eq(user2), eq(TaskMode.CHECK), any())).willReturn(waitingFuture);
 
         // 실행 및 검증: 치명적 오류를 전파하기 전 남은 작업을 best-effort로 취소한다
         thenThrownBy(() -> lottoInteractor.check(new TargetCommand(TriggerType.MANUAL, null)))

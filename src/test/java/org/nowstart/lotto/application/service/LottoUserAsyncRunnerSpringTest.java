@@ -4,6 +4,7 @@ import static org.assertj.core.api.BDDAssertions.then;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -46,7 +47,7 @@ class LottoUserAsyncRunnerSpringTest {
         LottoUser user = new LottoUser("user1", "password", 1, "user1@nowstart.org", false);
 
         // 실행: 사용자 작업을 비동기로 요청한다
-        CompletableFuture<Boolean> future = lottoUserRunner.runAsync(user, TaskMode.CHECK);
+        CompletableFuture<Boolean> future = lottoUserRunner.runAsync(user, TaskMode.CHECK, new AtomicBoolean(false));
 
         // 검증: 호출 스레드는 즉시 future를 받고 실제 작업은 다른 스레드에서 진행 중이다
         then(blockingLottoAutomationPort.awaitLoginStarted()).isTrue();

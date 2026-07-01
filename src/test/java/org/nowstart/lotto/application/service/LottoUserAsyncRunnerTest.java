@@ -31,6 +31,7 @@ import org.nowstart.lotto.application.port.out.LoadLottoUsersPort.LottoUser;
 import org.nowstart.lotto.application.port.out.SendNotificationPort;
 import org.nowstart.lotto.application.port.out.SendNotificationPort.NotificationMessage;
 import org.nowstart.lotto.domain.type.TaskMode;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.springframework.scheduling.annotation.Async;
 
 @ExtendWith(MockitoExtension.class)
@@ -64,7 +65,7 @@ class LottoUserAsyncRunnerTest {
     @DisplayName("사용자 작업 실행 메서드는 lottoTaskExecutor 기반 @Async로 선언한다")
     void shouldDeclareAsyncExecutor() throws NoSuchMethodException {
         // 준비: 사용자별 실행 메서드를 조회한다
-        Method runAsync = LottoUserAsyncRunner.class.getMethod("runAsync", LottoUser.class, TaskMode.class);
+        Method runAsync = LottoUserAsyncRunner.class.getMethod("runAsync", LottoUser.class, TaskMode.class, AtomicBoolean.class);
 
         // 실행 및 검증: Spring Async 프록시가 사용할 executor 이름을 명시한다
         Async async = runAsync.getAnnotation(Async.class);
@@ -85,7 +86,7 @@ class LottoUserAsyncRunnerTest {
                 .willReturn(Optional.of(message));
 
         // 실행: 사용자 확인 작업을 실행한다
-        boolean result = lottoUserAsyncRunner.runAsync(user, TaskMode.CHECK).join();
+        boolean result = lottoUserAsyncRunner.runAsync(user, TaskMode.CHECK, new AtomicBoolean(false)).join();
 
         // 검증: 구매 단계 없이 성공 알림을 전송한다
         then(result).isTrue();
@@ -109,7 +110,7 @@ class LottoUserAsyncRunnerTest {
                 .willReturn(Optional.of(successMessage));
 
         // 실행: 사용자 구매 작업을 실행한다
-        boolean result = lottoUserAsyncRunner.runAsync(user, TaskMode.PURCHASE).join();
+        boolean result = lottoUserAsyncRunner.runAsync(user, TaskMode.PURCHASE, new AtomicBoolean(false)).join();
 
         // 검증: 구매 이후 구매 전용 확인 경로를 타고 성공 알림을 전송한다
         then(result).isTrue();
@@ -133,7 +134,7 @@ class LottoUserAsyncRunnerTest {
                 .willReturn(failureMessage);
 
         // 실행: 사용자 구매 작업을 실행한다
-        boolean result = lottoUserAsyncRunner.runAsync(user, TaskMode.PURCHASE).join();
+        boolean result = lottoUserAsyncRunner.runAsync(user, TaskMode.PURCHASE, new AtomicBoolean(false)).join();
 
         // 검증: 실패 알림을 보내고 실패 결과를 반환한다
         then(result).isFalse();
@@ -149,7 +150,7 @@ class LottoUserAsyncRunnerTest {
         given(lottoAutomationPort.openSession()).willThrow(fatalError);
 
         // 실행 및 검증: 치명적 오류는 호출자에게 전파한다
-        thenThrownBy(() -> lottoUserAsyncRunner.runAsync(user, TaskMode.CHECK).join())
+        thenThrownBy(() -> lottoUserAsyncRunner.runAsync(user, TaskMode.CHECK, new AtomicBoolean(false)).join())
                 .isInstanceOf(OutOfMemoryError.class)
                 .isSameAs(fatalError);
     }

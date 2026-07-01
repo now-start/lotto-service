@@ -61,7 +61,7 @@ lotto:
       init: ${LOTTO_INIT:false}
   max-concurrent-sessions: ${LOTTO_MAX_CONCURRENT_SESSIONS:1}
   user-task-timeout-ms: ${LOTTO_USER_TASK_TIMEOUT_MS:180000}
-  trace-enabled: ${LOTTO_TRACE_ENABLED:true}
+  trace-enabled: ${LOTTO_TRACE_ENABLED:false}
   mail:
     from: ${LOTTO_MAIL_FROM:no-reply@localhost}
   # 스케줄러는 local에서 비활성이라 아래 cron은 사용되지 않지만, 스키마 검증(@NotBlank)을 위해 기본값을 둡니다.
