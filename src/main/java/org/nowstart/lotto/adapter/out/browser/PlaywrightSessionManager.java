@@ -46,6 +46,7 @@ public class PlaywrightSessionManager {
         Playwright playwright = null;
         Browser browser = null;
         BrowserContext context = null;
+        boolean traceStarted = false;
         try {
             playwright = Playwright.create();
             browser = playwright.chromium().launch(browserLaunchOptions.get());
@@ -54,19 +55,21 @@ public class PlaywrightSessionManager {
                     .setIsMobile(false));
             context.addInitScript(LottoBrowserConstants.SCRIPT_CHROME_PLATFORM);
             playWrightTraceArchive.start(context);
+            traceStarted = true;
             return new PlaywrightLottoSession(
                     context.newPage(),
                     context,
                     browser,
                     playwright,
                     playWrightTraceArchive,
+                    new AtomicBoolean(false),
                     releasePermit
             );
         } catch (RuntimeException exception) {
-            cleanupFailedOpen(context, browser, playwright, releasePermit);
+            cleanupFailedOpen(context, browser, playwright, releasePermit, traceStarted);
             throw exception;
         } catch (Error error) {
-            cleanupFailedOpen(context, browser, playwright, releasePermit);
+            cleanupFailedOpen(context, browser, playwright, releasePermit, traceStarted);
             throw error;
         }
     }
@@ -99,8 +102,12 @@ public class PlaywrightSessionManager {
             BrowserContext context,
             Browser browser,
             Playwright playwright,
-            Runnable releasePermit
+            Runnable releasePermit,
+            boolean traceStarted
     ) {
+        if (traceStarted && context != null) {
+            playWrightTraceArchive.stop(context, true);
+        }
         closeQuietly(context, "브라우저 컨텍스트 종료 실패");
         closeQuietly(browser, "브라우저 종료 실패");
         closeQuietly(playwright, "Playwright 종료 실패");
@@ -113,13 +120,19 @@ public class PlaywrightSessionManager {
             Browser browser,
             Playwright playwright,
             PlaywrightTraceArchive playWrightTraceArchive,
+            AtomicBoolean failed,
             Runnable releasePermit
     ) implements LottoAutomationSession {
 
         @Override
+        public void markFailed() {
+            failed.set(true);
+        }
+
+        @Override
         public void close() {
             try {
-                playWrightTraceArchive.stop(context);
+                playWrightTraceArchive.stop(context, failed.get());
             } finally {
                 try {
                     closePage();

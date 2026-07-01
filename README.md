@@ -36,6 +36,7 @@ services:
 > 위 환경변수(`MAIL_*`, `LOTTO_*`)와 `lotto.*` 설정은 platform의 Spring Config Server
 > (`spring.config.import`)에서 주입하는 것을 기본 전제로 합니다.
 > 로컬에서 Config Server 없이 실행할 경우에는 별도 `application-local.yaml`(local 프로파일)을 두어 오버라이드합니다.
+> `bootRun`은 별도 지정이 없으면 `local` 프로파일로 실행됩니다.
 
 ### 주요 `lotto.*` 튜닝 설정
 
@@ -47,7 +48,6 @@ services:
 | lotto.purchase-result-poll-interval-ms | 1000         | 구매 후 원장 확인 폴링 간격(ms)                         |
 | lotto.max-concurrent-sessions          | 3            | 동시에 띄우는 Playwright 브라우저 세션 상한                 |
 | lotto.user-task-timeout-ms             | 180000       | 사용자 1인 작업(login→구매→확인)의 최대 실행 시간(ms)          |
-| lotto.trace-enabled                    | false        | Playwright 트레이스 저장 여부. 민감정보 캡처 위험으로 기본 비활성화   |
 | lotto.cron.check                       | 0 0 22 * * 6 | 결과 확인 스케줄 cron                              |
 | lotto.cron.buy                         | 0 0 9 * * 0  | 구매 스케줄 cron                                |
 | lotto.cron.zone                        | Asia/Seoul   | 스케줄러 타임존                                   |
@@ -74,6 +74,7 @@ services:
 - **중복 실행 방지**: 동일 사용자·모드 작업이 인스턴스 내에서 동시에 중복 실행되지 않도록 in-flight 가드를 둡니다. (다중 인스턴스 배포 시에는 분산 락/리더 선출이 별도로 필요합니다.)
 - **동시성 상한**: `lotto.max-concurrent-sessions`로 동시에 뜨는 브라우저 세션 수를 제한합니다.
 - **작업 타임아웃**: 사용자 작업이 `lotto.user-task-timeout-ms`를 초과하면 실패로 처리합니다.
+- **실패 트레이스**: Playwright trace는 세션 중 항상 수집하되, 정상 종료 시 폐기하고 실패 시에만 `lotto-trace-*.zip`으로 저장합니다.
 
 ## Config
 

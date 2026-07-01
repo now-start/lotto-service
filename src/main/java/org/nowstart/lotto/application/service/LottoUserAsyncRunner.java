@@ -46,25 +46,38 @@ public class LottoUserAsyncRunner implements LottoUserRunner {
         LottoAccountSnapshot accountSnapshot = null;
         List<CheckResult> results = null;
         String abortPhase = null;
+        boolean checkAbortedAfterCompletion = false;
         try (LottoAutomationSession session = lottoAutomationPort.openSession()) {
-            if (abortSignal.get()) {
-                abortPhase = "세션 확보 직후";
-            } else {
-                log.info("[Task][{}] Start mode={}", user.id(), mode);
-                accountSnapshot = runStep(StepType.LOGIN, user, () -> lottoAutomationPort.login(session, user));
-
-                if (mode == TaskMode.PURCHASE) {
-                    Optional<PurchaseReceipt> purchaseReceipt = runStep(StepType.PURCHASE, user,
-                            () -> lottoAutomationPort.buy(session, user, abortSignal::get));
-                    if (purchaseReceipt.isEmpty()) {
-                        abortPhase = "최종 확정 미제출/중단";
-                    } else {
-                        results = List.of(runStep(StepType.CHECK, user,
-                                () -> lottoAutomationPort.check(session, purchaseReceipt.get())));
-                    }
+            try {
+                if (abortSignal.get()) {
+                    session.markFailed();
+                    abortPhase = "세션 확보 직후";
                 } else {
-                    results = runStep(StepType.CHECK, user, () -> lottoAutomationPort.check(session));
+                    log.info("[Task][{}] Start mode={}", user.id(), mode);
+                    accountSnapshot = runStep(StepType.LOGIN, user, () -> lottoAutomationPort.login(session, user));
+
+                    if (mode == TaskMode.PURCHASE) {
+                        Optional<PurchaseReceipt> purchaseReceipt = runStep(StepType.PURCHASE, user,
+                                () -> lottoAutomationPort.buy(session, user, abortSignal::get));
+                        if (purchaseReceipt.isEmpty()) {
+                            session.markFailed();
+                            abortPhase = "최종 확정 미제출/중단";
+                        } else {
+                            results = List.of(runStep(StepType.CHECK, user,
+                                    () -> lottoAutomationPort.check(session, purchaseReceipt.get())));
+                        }
+                    } else {
+                        results = runStep(StepType.CHECK, user, () -> lottoAutomationPort.check(session));
+                    }
                 }
+
+                if (abortPhase == null && mode == TaskMode.CHECK && abortSignal.get()) {
+                    session.markFailed();
+                    checkAbortedAfterCompletion = true;
+                }
+            } catch (RuntimeException | Error exception) {
+                session.markFailed();
+                throw exception;
             }
         } catch (LottoAutomationException exception) {
             // try-with-resources가 세션을 이미 닫음(permit 해제) → 아래 통지가 브라우저 슬롯을 점유하지 않는다.
@@ -81,7 +94,7 @@ public class LottoUserAsyncRunner implements LottoUserRunner {
         if (abortPhase != null) {
             return aborted(user, mode, abortPhase);
         }
-        if (mode == TaskMode.CHECK && abortSignal.get()) {
+        if (checkAbortedAfterCompletion || mode == TaskMode.CHECK && abortSignal.get()) {
             // CHECK 진행 중 호출자 타임아웃 → 호출자는 이미 실패 보고. 뒤늦은 성공 통지로 상태 불일치를 만들지 않는다.
             log.warn("[Task][{}] Check completed but aborted meanwhile - suppressing success notification", user.id());
             return false;

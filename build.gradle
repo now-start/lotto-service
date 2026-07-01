@@ -61,6 +61,11 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
+bootRun {
+    systemProperty 'spring.profiles.active',
+            System.getProperty('spring.profiles.active', System.getenv('SPRING_PROFILES_ACTIVE') ?: 'local')
+}
+
 bootBuildImage {
     runImage = "mcr.microsoft.com/playwright/java:v$playwrightVersion"
 

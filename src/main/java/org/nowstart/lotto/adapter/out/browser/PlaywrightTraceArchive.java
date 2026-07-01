@@ -12,23 +12,17 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 import java.util.stream.StreamSupport;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.nowstart.lotto.config.LottoProperties;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class PlaywrightTraceArchive {
 
     private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
     private static final String TRACE_GLOB = "lotto-trace-*.zip";
     private final Object cleanupMonitor = new Object();
-
-    // 트레이스는 로그인 비밀번호 입력·계정/예치금 등 민감 정보를 캡처하므로 기본 비활성화한다.
-    private final LottoProperties lottoProperties;
 
     @Value("${logging.file.path:./logs}")
     private String logPath;
@@ -47,32 +41,26 @@ public class PlaywrightTraceArchive {
     }
 
     public void start(BrowserContext context) {
-        if (!isTraceEnabled()) {
-            return;
-        }
         context.tracing().start(new Tracing.StartOptions()
                 .setScreenshots(true)
                 .setSnapshots(true)
                 .setSources(true));
     }
 
-    public void stop(BrowserContext context) {
-        if (!isTraceEnabled()) {
-            return;
-        }
+    public void stop(BrowserContext context, boolean saveTrace) {
         try {
+            if (!saveTrace) {
+                context.tracing().stop();
+                return;
+            }
             String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMATTER);
             String traceId = UUID.randomUUID().toString().substring(0, 8);
             Path tracePath = Paths.get(logPath, "lotto-trace-" + timestamp + "-" + traceId + ".zip");
             context.tracing().stop(new Tracing.StopOptions().setPath(tracePath));
             cleanupOldTraceFiles();
         } catch (Exception exception) {
-            log.warn("페이지 종료 중 오류 발생", exception);
+            log.warn("트레이스 종료 중 오류 발생", exception);
         }
-    }
-
-    private boolean isTraceEnabled() {
-        return Boolean.TRUE.equals(lottoProperties.getTraceEnabled());
     }
 
     private void ensureLogDirectoryExists() throws IOException {

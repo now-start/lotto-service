@@ -31,9 +31,14 @@ public class InitializeLottoInteractor implements InitializeLottoUseCase {
 
             log.info("[Init][{}] Start", user.id());
             try (LottoAutomationSession session = lottoAutomationPort.openSession()) {
-                LottoAccountSnapshot accountSnapshot = lottoAutomationPort.login(session, user);
-                sendNotificationPort.send(lottoNotificationFactory.createInitializationMessage(user, accountSnapshot));
-                log.info("[Init][{}] Success deposit={}", user.id(), accountSnapshot.deposit());
+                try {
+                    LottoAccountSnapshot accountSnapshot = lottoAutomationPort.login(session, user);
+                    sendNotificationPort.send(lottoNotificationFactory.createInitializationMessage(user, accountSnapshot));
+                    log.info("[Init][{}] Success deposit={}", user.id(), accountSnapshot.deposit());
+                } catch (RuntimeException | Error exception) {
+                    session.markFailed();
+                    throw exception;
+                }
             } catch (Exception exception) {
                 log.error("[Init][{}] Failed", user.id(), exception);
             }

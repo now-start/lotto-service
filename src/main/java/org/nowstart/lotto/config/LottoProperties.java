@@ -47,9 +47,6 @@ public class LottoProperties {
     @NotNull(message = "동시 실행 세션 수는 필수입니다")
     private Integer maxConcurrentSessions = 3;
 
-    @NotNull(message = "트레이스 활성화 여부는 필수입니다")
-    private Boolean traceEnabled = false;
-
     @Min(value = 1000, message = "사용자 작업 타임아웃은 최소 1초여야 합니다")
     @Max(value = 1800000, message = "사용자 작업 타임아웃은 최대 30분까지 가능합니다")
     @NotNull(message = "사용자 작업 타임아웃은 필수입니다")
