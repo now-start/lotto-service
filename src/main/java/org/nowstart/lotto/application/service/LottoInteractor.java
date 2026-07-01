@@ -6,12 +6,17 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.nowstart.lotto.application.port.in.LottoUseCase;
 import org.nowstart.lotto.application.port.out.LoadLottoUsersPort;
+import org.nowstart.lotto.config.LottoProperties;
 import org.nowstart.lotto.domain.exception.InvalidManualUserSelectionException;
 import org.nowstart.lotto.application.port.in.LottoUseCase.LottoExecution;
 import org.nowstart.lotto.application.port.out.LoadLottoUsersPort.LottoUser;
@@ -27,6 +32,12 @@ public class LottoInteractor implements LottoUseCase {
 
     private final LoadLottoUsersPort loadLottoUsersPort;
     private final LottoUserRunner lottoUserRunner;
+    private final LottoProperties lottoProperties;
+
+    // 인스턴스 내 중복 실행 방지(수동 API + 스케줄 동시 실행 등). 다중 인스턴스 환경은 분산 락/리더 선출이 별도로 필요하다.
+    // 키는 실제 비동기 작업이 종료될 때(whenComplete) 해제한다 — 호출자 타임아웃 시점에 해제하면
+    // 작업이 백그라운드에서 계속 도는 동안 같은 사용자의 중복 실행이 시작될 수 있으므로 금물.
+    private final Set<String> inFlightKeys = ConcurrentHashMap.newKeySet();
 
     @Override
     public LottoExecution check(TargetCommand command) {
@@ -46,13 +57,14 @@ public class LottoInteractor implements LottoUseCase {
         Instant startedAt = Instant.now();
         long startedNano = System.nanoTime();
 
-        UserExecutionCounts userExecutionCounts = runUsers(targetUsers, mode);
-        int successUsers = userExecutionCounts.successUsers();
-        int failedUsers = userExecutionCounts.failedUsers();
+        UserExecutionCounts counts = runUsers(targetUsers, mode);
+        int successUsers = counts.successUsers();
+        int failedUsers = counts.failedUsers();
+        int skippedUsers = counts.skippedUsers();
 
         Instant endedAt = Instant.now();
         long durationMs = (System.nanoTime() - startedNano) / 1_000_000;
-        int totalUsers = targetUsers.size();
+        int totalUsers = successUsers + failedUsers;
         ExecutionStatus status = ExecutionStatus.fromCounts(totalUsers, failedUsers);
 
         LottoExecution execution = new LottoExecution(
@@ -67,19 +79,35 @@ public class LottoInteractor implements LottoUseCase {
                 failedUsers
         );
 
-        log.info("[Task] Batch complete mode={} trigger={} status={} success={} failed={} durationMs={}",
-                mode, trigger, status, successUsers, failedUsers, durationMs);
+        log.info("[Task] Batch complete mode={} trigger={} status={} success={} failed={} skipped={} durationMs={}",
+                mode, trigger, status, successUsers, failedUsers, skippedUsers, durationMs);
 
         return execution;
     }
 
     private UserExecutionCounts runUsers(List<LottoUser> targetUsers, TaskMode mode) {
         List<UserTask> userTasks = new ArrayList<>();
-        try {
-            for (LottoUser user : targetUsers) {
-                userTasks.add(new UserTask(user, lottoUserRunner.runAsync(user, mode)));
+        int skippedUsers = 0;
+        for (LottoUser user : targetUsers) {
+            String key = mode + ":" + user.id();
+            if (!inFlightKeys.add(key)) {
+                skippedUsers++;
+                log.warn("[Task][{}] Skip - 동일 사용자 작업이 이미 실행 중 mode={}", user.id(), mode);
+                continue;
             }
+            CompletableFuture<Boolean> future;
+            try {
+                future = lottoUserRunner.runAsync(user, mode);
+            } catch (RuntimeException submitError) {
+                inFlightKeys.remove(key);
+                throw submitError;
+            }
+            // 실제 작업 종료(성공/실패/취소) 시점에만 in-flight 키를 해제한다.
+            future.whenComplete((result, error) -> inFlightKeys.remove(key));
+            userTasks.add(new UserTask(user, key, future));
+        }
 
+        try {
             int successUsers = 0;
             int failedUsers = 0;
             for (UserTask userTask : userTasks) {
@@ -89,7 +117,7 @@ public class LottoInteractor implements LottoUseCase {
                     failedUsers++;
                 }
             }
-            return new UserExecutionCounts(successUsers, failedUsers);
+            return new UserExecutionCounts(successUsers, failedUsers, skippedUsers);
         } catch (Error error) {
             cancelRemaining(userTasks);
             throw error;
@@ -98,14 +126,24 @@ public class LottoInteractor implements LottoUseCase {
 
     private boolean joinUserTask(UserTask userTask, TaskMode mode) {
         try {
-            return userTask.future().join();
-        } catch (CompletionException exception) {
+            return userTask.future().get(lottoProperties.getUserTaskTimeoutMs(), TimeUnit.MILLISECONDS);
+        } catch (ExecutionException exception) {
             Throwable cause = exception.getCause();
             if (cause instanceof Error error) {
                 throw error;
             }
             log.error("[Task][{}] Failed mode={} step=async", userTask.user().id(), mode,
                     cause == null ? exception : cause);
+            return false;
+        } catch (TimeoutException exception) {
+            // 호출자 대기만 종료한다. 실제 작업은 백그라운드에서 계속될 수 있으며,
+            // in-flight 키는 whenComplete가 실제 종료 시 해제하므로 중복 실행은 막힌 상태로 유지된다.
+            log.error("[Task][{}] Timed out mode={} after {}ms (작업은 백그라운드에서 계속될 수 있음)",
+                    userTask.user().id(), mode, lottoProperties.getUserTaskTimeoutMs());
+            return false;
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            log.error("[Task][{}] Interrupted mode={}", userTask.user().id(), mode, exception);
             return false;
         }
     }
@@ -144,9 +182,9 @@ public class LottoInteractor implements LottoUseCase {
                 .toList();
     }
 
-    private record UserTask(LottoUser user, CompletableFuture<Boolean> future) {
+    private record UserTask(LottoUser user, String key, CompletableFuture<Boolean> future) {
     }
 
-    private record UserExecutionCounts(int successUsers, int failedUsers) {
+    private record UserExecutionCounts(int successUsers, int failedUsers, int skippedUsers) {
     }
 }

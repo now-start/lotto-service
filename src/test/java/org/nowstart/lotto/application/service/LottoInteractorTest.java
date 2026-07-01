@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.nowstart.lotto.application.port.in.LottoUseCase.LottoExecution;
 import org.nowstart.lotto.application.port.in.LottoUseCase.TargetCommand;
 import org.nowstart.lotto.application.port.out.LoadLottoUsersPort;
+import org.nowstart.lotto.config.LottoProperties;
 import org.nowstart.lotto.application.port.out.LoadLottoUsersPort.LottoUser;
 import org.nowstart.lotto.domain.exception.InvalidManualUserSelectionException;
 import org.nowstart.lotto.domain.type.ExecutionStatus;
@@ -36,7 +37,7 @@ class LottoInteractorTest {
 
     @BeforeEach
     void setUp() {
-        lottoInteractor = new LottoInteractor(loadLottoUsersPort, lottoUserRunner);
+        lottoInteractor = new LottoInteractor(loadLottoUsersPort, lottoUserRunner, new LottoProperties());
     }
 
     @Test

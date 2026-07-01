@@ -21,6 +21,7 @@ import org.springframework.stereotype.Component;
 public class PlaywrightTraceArchive {
 
     private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
+    private static final String TRACE_GLOB = "lotto-trace-*.zip";
     private final Object cleanupMonitor = new Object();
 
     @Value("${logging.file.path:./logs}")
@@ -28,6 +29,10 @@ public class PlaywrightTraceArchive {
 
     @Value("${logging.logback.rollingpolicy.max-history:7}")
     private int maxTraceFiles;
+
+    // 트레이스는 로그인 비밀번호 입력·계정/예치금 등 민감 정보를 캡처하므로 기본 비활성화한다.
+    @Value("${lotto.trace-enabled:false}")
+    private boolean traceEnabled;
 
     @PostConstruct
     void initialize() {
@@ -40,6 +45,9 @@ public class PlaywrightTraceArchive {
     }
 
     public void start(BrowserContext context) {
+        if (!traceEnabled) {
+            return;
+        }
         context.tracing().start(new Tracing.StartOptions()
                 .setScreenshots(true)
                 .setSnapshots(true)
@@ -47,6 +55,9 @@ public class PlaywrightTraceArchive {
     }
 
     public void stop(BrowserContext context) {
+        if (!traceEnabled) {
+            return;
+        }
         try {
             String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMATTER);
             String traceId = UUID.randomUUID().toString().substring(0, 8);
@@ -64,7 +75,7 @@ public class PlaywrightTraceArchive {
 
     private void cleanupOldTraceFiles() throws IOException {
         synchronized (cleanupMonitor) {
-            try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(logPath), "*.zip")) {
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(logPath), TRACE_GLOB)) {
                 StreamSupport.stream(stream.spliterator(), false)
                         .sorted((first, second) -> {
                             try {

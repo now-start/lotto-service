@@ -1,5 +1,6 @@
 package org.nowstart.lotto.adapter.out.browser;
 
+import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.LoadState;
 import com.microsoft.playwright.options.WaitForSelectorState;
@@ -8,7 +9,6 @@ import java.time.ZoneId;
 import lombok.extern.slf4j.Slf4j;
 import org.nowstart.lotto.application.port.out.LottoAutomationPort.PurchaseReceipt;
 import org.nowstart.lotto.application.port.out.LoadLottoUsersPort.LottoUser;
-import org.springframework.resilience.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -17,11 +17,11 @@ public class PlaywrightPurchaseExecutor {
 
     private static final ZoneId LOTTO_ZONE = ZoneId.of("Asia/Seoul");
 
-    @Retryable(
-            includes = Exception.class,
-            maxRetriesString = "${lotto.max-retries:3}",
-            delayString = "${lotto.retry-delay-ms:2000}"
-    )
+    /**
+     * 주의: 구매는 멱등하지 않으므로 절대 @Retryable을 적용하지 않는다.
+     * 최종 확정 클릭 이후에 예외가 발생하면 재시도가 중복 구매(실거래)를 유발할 수 있다.
+     * 일시적 오류는 구매 후 원장 확인(PlaywrightResultExecutor.check)에서 검증한다.
+     */
     public PurchaseReceipt buy(Page page, LottoUser user) {
         log.info("[Purchase][{}] Start count={}", user.id(), user.count());
 
@@ -32,7 +32,7 @@ public class PlaywrightPurchaseExecutor {
         page.locator(LottoBrowserConstants.QUANTITY_BOX).selectOption(String.valueOf(user.count()));
         page.locator(LottoBrowserConstants.CONFIRM_BTN).click();
         page.locator(LottoBrowserConstants.PURCHASE_BTN).click();
-        var finalConfirmButton = page.locator(LottoBrowserConstants.FINAL_CONFIRM_BTN);
+        Locator finalConfirmButton = page.locator(LottoBrowserConstants.FINAL_CONFIRM_BTN);
         finalConfirmButton.click();
         waitForFinalConfirmDialogToClose(finalConfirmButton, user);
 
@@ -40,9 +40,9 @@ public class PlaywrightPurchaseExecutor {
         return new PurchaseReceipt(user.count(), LocalDate.now(LOTTO_ZONE));
     }
 
-    private void waitForFinalConfirmDialogToClose(com.microsoft.playwright.Locator finalConfirmButton, LottoUser user) {
+    private void waitForFinalConfirmDialogToClose(Locator finalConfirmButton, LottoUser user) {
         try {
-            finalConfirmButton.waitFor(new com.microsoft.playwright.Locator.WaitForOptions()
+            finalConfirmButton.waitFor(new Locator.WaitForOptions()
                     .setState(WaitForSelectorState.HIDDEN)
                     .setTimeout(10_000));
         } catch (Exception exception) {

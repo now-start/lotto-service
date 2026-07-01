@@ -2,6 +2,7 @@ package org.nowstart.lotto.adapter.out.browser;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.PlaywrightException;
 import com.microsoft.playwright.options.LoadState;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,7 +26,7 @@ public class PlaywrightResultExecutor {
     }
 
     @Retryable(
-            includes = Exception.class,
+            includes = PlaywrightException.class,
             maxRetriesString = "${lotto.max-retries:3}",
             delayString = "${lotto.retry-delay-ms:2000}"
     )
@@ -35,21 +36,30 @@ public class PlaywrightResultExecutor {
 
         List<ResultRow> resultRows = loadResultRows(page);
         List<CheckResult> results = new ArrayList<>();
+        int captureFailures = 0;
         for (ResultRow resultRow : resultRows) {
             try {
                 results.add(captureDetail(page, resultRow));
             } catch (Exception exception) {
+                captureFailures++;
                 log.warn("[Check] Skip detail capture resultKey={}",
                         LottoPurchaseResultSelector.key(resultRow.result()), exception);
             }
         }
 
-        log.info("[Check] Complete resultCount={}", results.size());
+        // 파싱 가능한 행이 있는데 상세 캡처가 전부 실패한 경우는 selector 변경 등 이상 신호이므로
+        // 빈 결과를 "성공(할 일 없음)"으로 오인하지 않도록 실패로 처리한다.
+        if (!resultRows.isEmpty() && results.isEmpty()) {
+            throw new IllegalStateException(
+                    "결과 " + resultRows.size() + "행의 상세 캡처가 모두 실패했습니다 (selector 변경 의심)");
+        }
+
+        log.info("[Check] Complete resultCount={} captureFailures={}", results.size(), captureFailures);
         return results;
     }
 
     @Retryable(
-            includes = Exception.class,
+            includes = PlaywrightException.class,
             maxRetriesString = "${lotto.max-retries:3}",
             delayString = "${lotto.retry-delay-ms:2000}"
     )

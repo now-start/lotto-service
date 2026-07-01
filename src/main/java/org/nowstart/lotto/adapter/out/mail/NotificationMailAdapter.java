@@ -10,6 +10,7 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.HtmlUtils;
 
 @Slf4j
 @Component
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Component;
 public class NotificationMailAdapter implements SendNotificationPort {
 
     private static final String CONTENT_ID = "lottoImage";
+    private static final String INLINE_IMAGE_CONTENT_TYPE = "image/png";
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     private final JavaMailSender javaMailSender;
@@ -33,8 +35,10 @@ public class NotificationMailAdapter implements SendNotificationPort {
             helper.setSubject(message.subject());
 
             if (message.hasInlineImage()) {
-                helper.setText(message.text() + "<br/><br/><img src='cid:" + CONTENT_ID + "'/>", true);
-                helper.addInline(CONTENT_ID, new ByteArrayResource(message.inlineImage()));
+                String htmlBody = HtmlUtils.htmlEscape(message.text()).replace("\n", "<br/>")
+                        + "<br/><br/><img src='cid:" + CONTENT_ID + "'/>";
+                helper.setText(htmlBody, true);
+                helper.addInline(CONTENT_ID, new ByteArrayResource(message.inlineImage()), INLINE_IMAGE_CONTENT_TYPE);
             } else {
                 helper.setText(message.text(), false);
             }

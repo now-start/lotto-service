@@ -3,6 +3,7 @@ package org.nowstart.lotto.adapter.out.browser;
 import static org.assertj.core.api.BDDAssertions.then;
 
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.PlaywrightException;
 import java.lang.reflect.Method;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,25 +15,29 @@ import org.springframework.resilience.annotation.Retryable;
 class PlaywrightRetryAnnotationTest {
 
     @Test
-    @DisplayName("브라우저 외부 호출 executor는 Retryable 설정을 선언한다")
+    @DisplayName("브라우저 조회 executor는 일시 오류(PlaywrightException)에 한해 재시도를 선언한다")
     void shouldDeclareRetryOnTransientBrowserExecutors() throws NoSuchMethodException {
-        // 준비: 브라우저를 호출하는 executor 메서드들이 있다
-        // 실행 및 검증: 각 메서드가 동일한 재시도 정책을 가진다
+        // 준비 및 실행/검증: 조회성(멱등) executor는 동일한 재시도 정책을 가진다
         assertRetryable(PlaywrightLoginExecutor.class.getMethod("login", Page.class, LottoUser.class));
-        assertRetryable(PlaywrightPurchaseExecutor.class.getMethod("buy", Page.class, LottoUser.class));
         assertRetryable(PlaywrightResultExecutor.class.getMethod("check", Page.class));
-        assertRetryable(PlaywrightResultExecutor.class.getMethod(
-                "check",
-                Page.class,
-                PurchaseReceipt.class
-        ));
+        assertRetryable(PlaywrightResultExecutor.class.getMethod("check", Page.class, PurchaseReceipt.class));
+    }
+
+    @Test
+    @DisplayName("구매(buy)는 멱등하지 않으므로 재시도를 선언하지 않는다")
+    void shouldNotDeclareRetryOnPurchase() throws NoSuchMethodException {
+        // 준비: 구매 메서드를 조회한다
+        Method buy = PlaywrightPurchaseExecutor.class.getMethod("buy", Page.class, LottoUser.class);
+
+        // 실행 및 검증: 중복 구매 방지를 위해 Retryable을 선언하지 않는다
+        then(buy.getAnnotation(Retryable.class)).isNull();
     }
 
     private void assertRetryable(Method method) {
         Retryable retryable = method.getAnnotation(Retryable.class);
 
         then(retryable).isNotNull();
-        then(retryable.includes()).containsExactly(Exception.class);
+        then(retryable.includes()).containsExactly(PlaywrightException.class);
         then(retryable.maxRetriesString()).isEqualTo("${lotto.max-retries:3}");
         then(retryable.delayString()).isEqualTo("${lotto.retry-delay-ms:2000}");
     }
