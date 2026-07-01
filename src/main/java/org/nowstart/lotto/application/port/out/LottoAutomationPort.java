@@ -3,6 +3,8 @@ package org.nowstart.lotto.application.port.out;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.function.BooleanSupplier;
 import org.nowstart.lotto.application.port.out.LoadLottoUsersPort.LottoUser;
 
 public interface LottoAutomationPort {
@@ -11,7 +13,12 @@ public interface LottoAutomationPort {
 
     LottoAccountSnapshot login(LottoAutomationSession session, LottoUser user);
 
-    PurchaseReceipt buy(LottoAutomationSession session, LottoUser user);
+    /**
+     * @param abortRequested 최종 확정(실결제) 직전 확인용 중단 신호. true면 확정 클릭을 하지 않고
+     *                       Optional.empty()를 반환한다(구매 미수행).
+     * @return 구매 영수증. 최종 확정 전에 중단되면 Optional.empty().
+     */
+    Optional<PurchaseReceipt> buy(LottoAutomationSession session, LottoUser user, BooleanSupplier abortRequested);
 
     List<CheckResult> check(LottoAutomationSession session);
 

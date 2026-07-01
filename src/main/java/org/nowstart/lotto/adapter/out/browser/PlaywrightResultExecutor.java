@@ -37,21 +37,25 @@ public class PlaywrightResultExecutor {
         List<ResultRow> resultRows = loadResultRows(page);
         List<CheckResult> results = new ArrayList<>();
         int captureFailures = 0;
+        Exception lastCaptureFailure = null;
         for (ResultRow resultRow : resultRows) {
             try {
                 results.add(captureDetail(page, resultRow));
             } catch (Exception exception) {
                 captureFailures++;
+                lastCaptureFailure = exception;
                 log.warn("[Check] Skip detail capture resultKey={}",
                         LottoPurchaseResultSelector.key(resultRow.result()), exception);
             }
         }
 
-        // 파싱 가능한 행이 있는데 상세 캡처가 전부 실패한 경우는 selector 변경 등 이상 신호이므로
-        // 빈 결과를 "성공(할 일 없음)"으로 오인하지 않도록 실패로 처리한다.
+        // 파싱 가능한 행이 있는데 상세 캡처가 전부 실패한 경우는 이상 신호이므로 실패로 처리한다.
+        // 단, 일시적 오류(모달 대기/스크린샷 타임아웃 등)일 수 있으므로 재시도 대상인 PlaywrightException으로 던져
+        // 설정된 재시도 정책을 우회하지 않도록 한다(원인 보존).
         if (!resultRows.isEmpty() && results.isEmpty()) {
-            throw new IllegalStateException(
-                    "결과 " + resultRows.size() + "행의 상세 캡처가 모두 실패했습니다 (selector 변경 의심)");
+            throw new PlaywrightException(
+                    "결과 " + resultRows.size() + "행의 상세 캡처가 모두 실패했습니다 (selector 변경/일시 오류 의심)",
+                    lastCaptureFailure);
         }
 
         log.info("[Check] Complete resultCount={} captureFailures={}", results.size(), captureFailures);

@@ -3,6 +3,8 @@ package org.nowstart.lotto.application.service;
 import static org.assertj.core.api.BDDAssertions.then;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.function.BooleanSupplier;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.CountDownLatch;
@@ -107,7 +109,7 @@ class LottoUserAsyncRunnerSpringTest {
         }
 
         @Override
-        public PurchaseReceipt buy(LottoAutomationSession session, LottoUser user) {
+        public Optional<PurchaseReceipt> buy(LottoAutomationSession session, LottoUser user, BooleanSupplier abortRequested) {
             throw new UnsupportedOperationException("purchase is not used in this test");
         }
 

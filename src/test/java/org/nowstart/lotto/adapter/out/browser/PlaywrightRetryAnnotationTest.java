@@ -3,6 +3,7 @@ package org.nowstart.lotto.adapter.out.browser;
 import static org.assertj.core.api.BDDAssertions.then;
 
 import com.microsoft.playwright.Page;
+import java.util.function.BooleanSupplier;
 import com.microsoft.playwright.PlaywrightException;
 import java.lang.reflect.Method;
 import org.junit.jupiter.api.DisplayName;
@@ -27,7 +28,7 @@ class PlaywrightRetryAnnotationTest {
     @DisplayName("구매(buy)는 멱등하지 않으므로 재시도를 선언하지 않는다")
     void shouldNotDeclareRetryOnPurchase() throws NoSuchMethodException {
         // 준비: 구매 메서드를 조회한다
-        Method buy = PlaywrightPurchaseExecutor.class.getMethod("buy", Page.class, LottoUser.class);
+        Method buy = PlaywrightPurchaseExecutor.class.getMethod("buy", Page.class, LottoUser.class, BooleanSupplier.class);
 
         // 실행 및 검증: 중복 구매 방지를 위해 Retryable을 선언하지 않는다
         then(buy.getAnnotation(Retryable.class)).isNull();

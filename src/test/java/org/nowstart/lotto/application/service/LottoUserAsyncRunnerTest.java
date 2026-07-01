@@ -90,7 +90,7 @@ class LottoUserAsyncRunnerTest {
 
         // 검증: 구매 단계 없이 성공 알림을 전송한다
         then(result).isTrue();
-        BDDMockito.then(lottoAutomationPort).should(never()).buy(eq(session), any(LottoUser.class));
+        BDDMockito.then(lottoAutomationPort).should(never()).buy(eq(session), any(LottoUser.class), any());
         BDDMockito.then(sendNotificationPort).should(times(1)).send(message);
     }
 
@@ -104,7 +104,7 @@ class LottoUserAsyncRunnerTest {
         NotificationMessage successMessage = new NotificationMessage("success", "numbers", null, "user1@nowstart.org");
         given(lottoAutomationPort.openSession()).willReturn(session);
         given(lottoAutomationPort.login(session, user)).willReturn(new LottoAccountSnapshot("ok", "5000"));
-        given(lottoAutomationPort.buy(session, user)).willReturn(purchaseReceipt);
+        given(lottoAutomationPort.buy(eq(session), eq(user), any())).willReturn(Optional.of(purchaseReceipt));
         given(lottoAutomationPort.check(session, purchaseReceipt)).willReturn(newPurchaseResult);
         given(lottoNotificationFactory.createCheckSuccessMessage(eq(user), any(), any()))
                 .willReturn(Optional.of(successMessage));
@@ -116,7 +116,7 @@ class LottoUserAsyncRunnerTest {
         then(result).isTrue();
         InOrder purchaseOrder = inOrder(lottoAutomationPort);
         BDDMockito.then(lottoAutomationPort).should(purchaseOrder).login(session, user);
-        BDDMockito.then(lottoAutomationPort).should(purchaseOrder).buy(session, user);
+        BDDMockito.then(lottoAutomationPort).should(purchaseOrder).buy(eq(session), eq(user), any());
         BDDMockito.then(lottoAutomationPort).should(purchaseOrder).check(session, purchaseReceipt);
         BDDMockito.then(lottoAutomationPort).should(never()).check(session);
         BDDMockito.then(sendNotificationPort).should(times(1)).send(successMessage);

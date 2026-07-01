@@ -106,8 +106,10 @@ public class LottoInteractor implements LottoUseCase {
             try {
                 future = lottoUserRunner.runAsync(user, mode, abortSignal);
             } catch (RuntimeException | Error submitError) {
-                // 제출 실패(프록시/러너 치명 오류 등) 시 키가 남아 이후 실행이 영구 skip되지 않도록 해제 후 전파.
+                // 제출 실패(프록시/러너 치명 오류 등) 시: 현재 사용자 키 해제 + 이미 제출된 이전 작업들도
+                // 중단 신호/취소하여, 실패한 이 호출 이후 이전 작업이 뒤늦게 실구매하지 않도록 한다.
                 inFlightKeys.remove(key);
+                cancelRemaining(userTasks);
                 throw submitError;
             }
             // 실제 작업 종료(성공/실패/취소) 시점에만 in-flight 키를 해제한다.

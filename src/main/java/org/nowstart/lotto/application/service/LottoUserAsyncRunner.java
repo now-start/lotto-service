@@ -1,6 +1,7 @@
 package org.nowstart.lotto.application.service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.RequiredArgsConstructor;
@@ -52,20 +53,21 @@ public class LottoUserAsyncRunner implements LottoUserRunner {
 
             List<CheckResult> results;
             if (mode == TaskMode.PURCHASE) {
-                // 실거래(구매) 직전 최종 확인 — 타임아웃으로 큐잉되었던 작업이 뒤늦게 실구매하는 것을 막는다.
-                if (abortSignal.get()) {
-                    log.warn("[Task][{}] Aborted before purchase (호출자 타임아웃) mode={}", user.id(), mode);
-                    return false;
-                }
-                PurchaseReceipt purchaseReceipt = runStep(
+                // 실결제 직전 abort는 구매 executor(buy) 내부에서 최종 확인한다(Optional.empty = 미수행).
+                Optional<PurchaseReceipt> purchaseReceipt = runStep(
                         StepType.PURCHASE,
                         user,
-                        () -> lottoAutomationPort.buy(session, user)
+                        () -> lottoAutomationPort.buy(session, user, abortSignal::get)
                 );
+                if (purchaseReceipt.isEmpty()) {
+                    log.warn("[Task][{}] Aborted before final purchase confirmation (호출자 타임아웃) mode={}",
+                            user.id(), mode);
+                    return false;
+                }
                 CheckResult latestPurchaseResult = runStep(
                         StepType.CHECK,
                         user,
-                        () -> lottoAutomationPort.check(session, purchaseReceipt)
+                        () -> lottoAutomationPort.check(session, purchaseReceipt.get())
                 );
                 results = List.of(latestPurchaseResult);
             } else {
