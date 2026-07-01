@@ -42,6 +42,16 @@ public class LottoProperties {
     @NotNull(message = "구매 결과 폴링 간격은 필수입니다")
     private Integer purchaseResultPollIntervalMs = 1000;
 
+    @Min(value = 1, message = "동시 실행 세션 수는 최소 1이어야 합니다")
+    @Max(value = 50, message = "동시 실행 세션 수는 최대 50까지 가능합니다")
+    @NotNull(message = "동시 실행 세션 수는 필수입니다")
+    private Integer maxConcurrentSessions = 3;
+
+    @Min(value = 1000, message = "사용자 작업 타임아웃은 최소 1초여야 합니다")
+    @Max(value = 1800000, message = "사용자 작업 타임아웃은 최대 30분까지 가능합니다")
+    @NotNull(message = "사용자 작업 타임아웃은 필수입니다")
+    private Integer userTaskTimeoutMs = 180000;
+
     @Valid
     @NotNull(message = "크론 설정은 필수입니다")
     private Cron cron = new Cron();
@@ -78,5 +88,8 @@ public class LottoProperties {
 
         @NotBlank(message = "로또 구매 크론 표현식은 필수입니다")
         private String buy = "0 0 9 * * 0";
+
+        @NotBlank(message = "스케줄러 타임존은 필수입니다")
+        private String zone = "Asia/Seoul";
     }
 }

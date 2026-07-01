@@ -1,0 +1,52 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  cloud:
+    config:
+      enabled: false
+    discovery:
+      enabled: false
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+
+logging:
+  level:
+    org.nowstart.lotto: DEBUG
+
+lotto:
+  users:
+    - id: ${LOTTO_ID}
+      password: ${LOTTO_PASSWORD}
+      email: ${LOTTO_EMAIL}
+      count: ${LOTTO_COUNT:5}
+      init: ${LOTTO_INIT:false}
+  max-concurrent-sessions: ${LOTTO_MAX_CONCURRENT_SESSIONS:1}
+  user-task-timeout-ms: ${LOTTO_USER_TASK_TIMEOUT_MS:180000}
+  mail:
+    from: ${LOTTO_MAIL_FROM:no-reply@localhost}
+  cron:
+    check: ${LOTTO_CRON_CHECK:0 0 22 * * 6}
+    buy: ${LOTTO_CRON_BUY:0 0 9 * * 0}
+    zone: ${LOTTO_CRON_ZONE:Asia/Seoul}

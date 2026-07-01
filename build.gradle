@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'org.nowstart'
-version = '9.2.1'
+version = '9.3.0'
 
 springBoot {
     buildInfo()
@@ -59,6 +59,11 @@ dependencyManagement {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+bootRun {
+    systemProperty 'spring.profiles.active',
+            System.getProperty('spring.profiles.active', System.getenv('SPRING_PROFILES_ACTIVE') ?: 'local')
 }
 
 bootBuildImage {

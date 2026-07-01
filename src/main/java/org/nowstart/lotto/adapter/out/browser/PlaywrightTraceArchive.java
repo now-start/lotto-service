@@ -21,6 +21,7 @@ import org.springframework.stereotype.Component;
 public class PlaywrightTraceArchive {
 
     private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
+    private static final String TRACE_GLOB = "lotto-trace-*.zip";
     private final Object cleanupMonitor = new Object();
 
     @Value("${logging.file.path:./logs}")
@@ -46,15 +47,19 @@ public class PlaywrightTraceArchive {
                 .setSources(true));
     }
 
-    public void stop(BrowserContext context) {
+    public void stop(BrowserContext context, boolean saveTrace) {
         try {
+            if (!saveTrace) {
+                context.tracing().stop();
+                return;
+            }
             String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMATTER);
             String traceId = UUID.randomUUID().toString().substring(0, 8);
             Path tracePath = Paths.get(logPath, "lotto-trace-" + timestamp + "-" + traceId + ".zip");
             context.tracing().stop(new Tracing.StopOptions().setPath(tracePath));
             cleanupOldTraceFiles();
         } catch (Exception exception) {
-            log.warn("페이지 종료 중 오류 발생", exception);
+            log.warn("트레이스 종료 중 오류 발생", exception);
         }
     }
 
@@ -64,7 +69,7 @@ public class PlaywrightTraceArchive {
 
     private void cleanupOldTraceFiles() throws IOException {
         synchronized (cleanupMonitor) {
-            try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(logPath), "*.zip")) {
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(logPath), TRACE_GLOB)) {
                 StreamSupport.stream(stream.spliterator(), false)
                         .sorted((first, second) -> {
                             try {

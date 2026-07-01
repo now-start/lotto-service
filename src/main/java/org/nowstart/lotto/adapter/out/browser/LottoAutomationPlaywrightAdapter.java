@@ -1,6 +1,8 @@
 package org.nowstart.lotto.adapter.out.browser;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.function.BooleanSupplier;
 import lombok.RequiredArgsConstructor;
 import org.nowstart.lotto.application.port.out.LottoAutomationPort;
 import org.nowstart.lotto.application.port.out.LottoAutomationSession;
@@ -28,8 +30,8 @@ public class LottoAutomationPlaywrightAdapter implements LottoAutomationPort {
     }
 
     @Override
-    public PurchaseReceipt buy(LottoAutomationSession session, LottoUser user) {
-        return playwrightPurchaseExecutor.buy(playwrightSessionManager.requirePage(session), user);
+    public Optional<PurchaseReceipt> buy(LottoAutomationSession session, LottoUser user, BooleanSupplier abortRequested) {
+        return playwrightPurchaseExecutor.buy(playwrightSessionManager.requirePage(session), user, abortRequested);
     }
 
     @Override
