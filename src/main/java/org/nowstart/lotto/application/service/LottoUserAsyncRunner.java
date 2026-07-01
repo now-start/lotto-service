@@ -62,6 +62,13 @@ public class LottoUserAsyncRunner implements LottoUserRunner {
                 if (purchaseReceipt.isEmpty()) {
                     log.warn("[Task][{}] Aborted before final purchase confirmation (호출자 타임아웃) mode={}",
                             user.id(), mode);
+                    // 예외 경로와 동일하게 실패 통지를 보낸다 — 스케줄 구매가 조용히 누락되지 않도록.
+                    LottoAutomationException abortException = new LottoAutomationException(
+                            StepType.PURCHASE,
+                            user.id(),
+                            new IllegalStateException("호출자 타임아웃으로 최종 확정 전 구매가 중단되었습니다"));
+                    sendNotification(user,
+                            lottoNotificationFactory.createFailureMessage(user, mode, abortException), "failure");
                     return false;
                 }
                 CheckResult latestPurchaseResult = runStep(
