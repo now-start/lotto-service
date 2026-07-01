@@ -59,12 +59,13 @@ public class PlaywrightSessionManager {
                     playWrightTraceArchive,
                     releasePermit
             );
-        } catch (Exception exception) {
-            closeQuietly(context, "브라우저 컨텍스트 종료 실패");
-            closeQuietly(browser, "브라우저 종료 실패");
-            closeQuietly(playwright, "Playwright 종료 실패");
-            releasePermit.run();
+        } catch (RuntimeException exception) {
+            cleanupFailedOpen(context, browser, playwright, releasePermit);
             throw exception;
+        } catch (Error error) {
+            // 치명적 오류(브라우저 launch 실패 등)에도 permit을 반드시 반납해야 세마포어가 영구 고갈되지 않는다.
+            cleanupFailedOpen(context, browser, playwright, releasePermit);
+            throw error;
         }
     }
 
@@ -82,6 +83,18 @@ public class PlaywrightSessionManager {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("브라우저 세션 허가 획득 중 인터럽트되었습니다", exception);
         }
+    }
+
+    private void cleanupFailedOpen(
+            BrowserContext context,
+            Browser browser,
+            Playwright playwright,
+            Runnable releasePermit
+    ) {
+        closeQuietly(context, "브라우저 컨텍스트 종료 실패");
+        closeQuietly(browser, "브라우저 종료 실패");
+        closeQuietly(playwright, "Playwright 종료 실패");
+        releasePermit.run();
     }
 
     private record PlaywrightLottoSession(
