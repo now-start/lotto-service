@@ -1,0 +1,71 @@
+# ============================================================
+# 로컬 실행 전용 프로파일 (Config Server / Eureka 없이 단독 구동)
+#
+# 실행 예:
+#   SPRING_PROFILES_ACTIVE=local \
+#   SPRING_CONFIG_IMPORT= \
+#   MAIL_USERNAME=your_smtp_id MAIL_PASSWORD=your_smtp_pw \
+#   LOTTO_ID=your_lotto_id LOTTO_PASSWORD=your_lotto_pw LOTTO_EMAIL=you@example.com \
+#   ./gradlew bootRun
+#
+# 주의사항:
+#  - SPRING_CONFIG_IMPORT= (빈 값)로 실행해야 원격 Config Server를 타지 않습니다.
+#    (base application.yaml의 import는 optional이라, 빈 값을 주면 로컬 설정만 사용)
+#  - local 프로파일에서는 스케줄러가 비활성화됩니다(LottoScheduleExecutor @Profile("!local")).
+#    로컬 테스트는 수동 API로: POST /api/lotto/check , POST /api/lotto/buy
+#    (※ /buy 는 실제 구매이므로 로컬에서도 실제 결제가 발생합니다 — 주의)
+#  - Playwright 브라우저는 실행 시 자동 다운로드됩니다. (수동: npx playwright install chromium)
+# ============================================================
+
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+# 로컬에서는 서비스 디스커버리 비활성
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+# 로컬 디버깅용 actuator 노출
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, refresh
+
+logging:
+  level:
+    org.nowstart.lotto: DEBUG
+
+lotto:
+  # @NotEmpty — 최소 1명. 실제 크리덴셜은 환경변수로 주입(하드코딩 금지)
+  users:
+    - id: ${LOTTO_ID}
+      password: ${LOTTO_PASSWORD}
+      email: ${LOTTO_EMAIL}
+      count: ${LOTTO_COUNT:5}
+      init: ${LOTTO_INIT:false}
+  max-concurrent-sessions: ${LOTTO_MAX_CONCURRENT_SESSIONS:1}
+  user-task-timeout-ms: ${LOTTO_USER_TASK_TIMEOUT_MS:180000}
+  trace-enabled: ${LOTTO_TRACE_ENABLED:true}
+  mail:
+    from: ${LOTTO_MAIL_FROM:no-reply@localhost}
+  # 스케줄러는 local에서 비활성이라 아래 cron은 사용되지 않지만, 스키마 검증(@NotBlank)을 위해 기본값을 둡니다.
+  cron:
+    check: ${LOTTO_CRON_CHECK:0 0 22 * * 6}
+    buy: ${LOTTO_CRON_BUY:0 0 9 * * 0}
+    zone: ${LOTTO_CRON_ZONE:Asia/Seoul}
