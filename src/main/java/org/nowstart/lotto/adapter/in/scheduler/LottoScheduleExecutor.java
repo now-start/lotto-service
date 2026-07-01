@@ -30,6 +30,8 @@ import org.springframework.stereotype.Component;
  * - /actuator/refresh(RefreshScopeRefreshedEvent) 시 기존 예약을 취소하고 즉시 재등록한다.
  * - 재등록 시 generation을 올려, 실행 중이라 cancel(false)로 못 막은 이전 트리거가 재예약을 시도할 때
  *   nextExecution이 null을 반환하도록 하여 옛/새 cron이 동시에 발화하는 중복 실행을 방지한다.
+ * - 재등록 전 새 cron/zone을 먼저 검증한다. 잘못된 값이면 기존 스케줄을 그대로 유지해, refresh 오타로
+ *   스케줄러가 통째로 멈추는 것을 방지한다.
  *
  * local 프로파일에서는 비활성화한다 — 로컬 실행 중 스케줄러가 실제 구매/확인을 자동 트리거하는 사고를 막기 위함.
  */
@@ -48,6 +50,37 @@ public class LottoScheduleExecutor {
 
     @PostConstruct
     public synchronized void scheduleAll() {
+        reschedule();
+    }
+
+    @EventListener(RefreshScopeRefreshedEvent.class)
+    public synchronized void onRefresh(RefreshScopeRefreshedEvent event) {
+        log.info("[Schedule] Refresh detected - rescheduling with current cron");
+        reschedule();
+    }
+
+    @PreDestroy
+    public synchronized void shutdown() {
+        generation.incrementAndGet();
+        cancelAll();
+    }
+
+    private void reschedule() {
+        String check = lottoProperties.getCron().getCheck();
+        String buy = lottoProperties.getCron().getBuy();
+        String zoneId = lottoProperties.getCron().getZone();
+
+        // 취소/재등록 전에 새 cron·zone을 검증한다. 잘못되면 기존 스케줄을 유지한다.
+        try {
+            ZoneId zone = ZoneId.of(zoneId);
+            new CronTrigger(check, zone);
+            new CronTrigger(buy, zone);
+        } catch (RuntimeException exception) {
+            log.error("[Schedule] Invalid cron/zone - keeping previous schedule (check={}, buy={}, zone={})",
+                    check, buy, zoneId, exception);
+            return;
+        }
+
         long currentGeneration = generation.incrementAndGet();
         cancelAll();
         scheduledTasks.add(taskScheduler.schedule(this::checkLottoResults,
@@ -55,22 +88,7 @@ public class LottoScheduleExecutor {
         scheduledTasks.add(taskScheduler.schedule(this::buyLottoTickets,
                 generationAwareTrigger(currentGeneration, () -> lottoProperties.getCron().getBuy())));
         log.info("[Schedule] Registered check/buy triggers (gen={}, check={}, buy={}, zone={})",
-                currentGeneration,
-                lottoProperties.getCron().getCheck(),
-                lottoProperties.getCron().getBuy(),
-                lottoProperties.getCron().getZone());
-    }
-
-    @EventListener(RefreshScopeRefreshedEvent.class)
-    public synchronized void onRefresh(RefreshScopeRefreshedEvent event) {
-        log.info("[Schedule] Refresh detected - rescheduling with current cron");
-        scheduleAll();
-    }
-
-    @PreDestroy
-    public synchronized void shutdown() {
-        generation.incrementAndGet();
-        cancelAll();
+                currentGeneration, check, buy, zoneId);
     }
 
     void checkLottoResults() {

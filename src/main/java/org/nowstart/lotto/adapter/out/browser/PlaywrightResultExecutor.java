@@ -95,8 +95,11 @@ public class PlaywrightResultExecutor {
             attempt++;
         } while (System.currentTimeMillis() < deadlineMs);
 
-        throw new IllegalStateException("Fresh purchase result was not found in lotto ledger within "
-                + lottoProperties.getPurchaseResultTimeoutMs() + "ms");
+        // 구매는 이미 성공했는데 원장 행이 timeout 직후 노출될 수 있다. 이 check 재시도는 재구매를 유발하지 않으므로
+        // 재시도 가능한 PlaywrightException으로 던져 @Retryable(PlaywrightException) 정책이 한 번 더 폴링하도록 한다.
+        throw new com.microsoft.playwright.PlaywrightException(
+                "Fresh purchase result was not found in lotto ledger within "
+                        + lottoProperties.getPurchaseResultTimeoutMs() + "ms");
     }
 
     private Optional<ResultRow> selectNewPurchaseRow(
