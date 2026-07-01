@@ -57,7 +57,7 @@ public class LottoUserAsyncRunner implements LottoUserRunner {
                         () -> lottoAutomationPort.buy(session, user, abortSignal::get)
                 );
                 if (purchaseReceipt.isEmpty()) {
-                    return aborted(user, mode, "최종 확정 직전");
+                    return aborted(user, mode, "최종 확정 미제출/중단");
                 }
                 CheckResult latestPurchaseResult = runStep(
                         StepType.CHECK,
@@ -104,7 +104,7 @@ public class LottoUserAsyncRunner implements LottoUserRunner {
             LottoAutomationException abortException = new LottoAutomationException(
                     StepType.PURCHASE,
                     user.id(),
-                    new IllegalStateException("호출자 타임아웃으로 구매가 중단되었습니다 (" + phase + ")"));
+                    new IllegalStateException("구매가 최종 확정 전에 중단/미제출되었습니다 (" + phase + ")"));
             sendNotification(user, lottoNotificationFactory.createFailureMessage(user, mode, abortException), "failure");
         }
         return false;

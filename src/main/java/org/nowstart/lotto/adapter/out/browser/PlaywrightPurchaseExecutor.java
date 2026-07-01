@@ -21,12 +21,16 @@ public class PlaywrightPurchaseExecutor {
     private static final ZoneId LOTTO_ZONE = ZoneId.of("Asia/Seoul");
     private static final double FINAL_CONFIRM_VISIBLE_TIMEOUT_MS = 30_000;
     private static final double FINAL_CONFIRM_CLICK_TIMEOUT_MS = 3_000;
+    private static final double FINAL_CONFIRM_HIDDEN_TIMEOUT_MS = 10_000;
 
     /**
      * 주의: 구매는 멱등하지 않으므로 절대 @Retryable을 적용하지 않는다.
      * - 최종 확정 클릭 '직전'까지만 abort를 확인한다(확정 전 중단 시 Optional.empty()).
-     * - 일단 클릭을 시도한 뒤에는(사이트에 요청이 전송됐을 수 있으므로) 클릭이 타임아웃/예외로 끝나더라도
-     *   실패로 단정하지 않고 영수증을 반환한다 → 호출자가 구매 후 원장 확인으로 성사 여부를 판정한다.
+     * - 클릭이 실제 '제출'됐는지는 확정 다이얼로그가 닫혔는지로 판정한다(이 사이트는 확정 성공 시 다이얼로그가 닫힘).
+     *   · 닫힘 = 제출됨 → 영수증 반환(호출자가 구매 후 원장 확인으로 최종 검증). 클릭이 응답 지연 등으로 예외를
+     *     던졌더라도 다이얼로그가 닫혔다면 제출된 것으로 본다.
+     *   · 여전히 열림 = actionability 실패 등으로 미제출 → 영수증을 만들지 않는다(안 산 구매가 원장의 옛 행에
+     *     오매칭되어 성공 통지되는 것을 방지).
      */
     public Optional<PurchaseReceipt> buy(Page page, LottoUser user, BooleanSupplier abortRequested) {
         log.info("[Purchase][{}] Start count={}", user.id(), user.count());
@@ -41,34 +45,43 @@ public class PlaywrightPurchaseExecutor {
 
         Locator finalConfirmButton = page.locator(LottoBrowserConstants.FINAL_CONFIRM_BTN);
 
-        // 1) 확정 버튼이 클릭 가능해질 때까지 먼저 대기한다(아직 클릭하지 않음).
+        // 1) 확정 버튼이 뜰 때까지 먼저 대기(아직 클릭하지 않음).
         finalConfirmButton.waitFor(new Locator.WaitForOptions()
                 .setState(WaitForSelectorState.VISIBLE)
                 .setTimeout(FINAL_CONFIRM_VISIBLE_TIMEOUT_MS));
 
-        // 2) 대기 직후, 실결제 클릭 직전에 마지막으로 abort를 확인한다(여기까진 아직 미클릭).
+        // 2) 실결제 클릭 직전에 마지막으로 abort 확인(여기까진 미클릭 확실).
         if (abortRequested.getAsBoolean()) {
             log.warn("[Purchase][{}] Aborted before final confirmation (호출자 타임아웃) - 구매 미수행", user.id());
             return Optional.empty();
         }
 
-        // 3) 여기서부터는 클릭이 실제 전송될 수 있다. 짧은 타임아웃으로 즉시 클릭하되,
-        //    클릭이 예외로 끝나도(응답 지연 등) 실패로 단정하지 않고 원장 확인으로 넘긴다.
+        // 3) 짧은 타임아웃으로 클릭 시도. 예외가 나도 실제 제출 여부는 다이얼로그 상태로 판정한다.
         try {
             finalConfirmButton.click(new Locator.ClickOptions().setTimeout(FINAL_CONFIRM_CLICK_TIMEOUT_MS));
-            waitForFinalConfirmDialogToClose(finalConfirmButton, user);
         } catch (PlaywrightException clickException) {
-            log.warn("[Purchase][{}] Final confirm click did not complete cleanly (타임아웃/오류) - "
-                    + "구매 성사 여부는 원장 확인으로 검증", user.id(), clickException);
+            log.warn("[Purchase][{}] Final confirm click threw (actionability/응답 지연 등) - "
+                    + "다이얼로그 상태로 제출 여부 판정", user.id(), clickException);
         }
 
-        log.info("[Purchase][{}] Confirm click attempted - proceeding to ledger verification", user.id());
+        // 4) 확정 다이얼로그가 닫혔으면 제출된 것 → 영수증(원장 검증). 여전히 열려 있으면 미제출 → 영수증 없음.
+        if (!confirmDialogClosed(finalConfirmButton)) {
+            log.warn("[Purchase][{}] Final confirm dialog still open - 확정 미제출로 판단, 구매 미수행", user.id());
+            return Optional.empty();
+        }
+
+        log.info("[Purchase][{}] Confirmation submitted (dialog closed) - proceeding to ledger verification", user.id());
         return Optional.of(new PurchaseReceipt(user.count(), LocalDate.now(LOTTO_ZONE)));
     }
 
-    private void waitForFinalConfirmDialogToClose(Locator finalConfirmButton, LottoUser user) {
-        finalConfirmButton.waitFor(new Locator.WaitForOptions()
-                .setState(WaitForSelectorState.HIDDEN)
-                .setTimeout(10_000));
+    private boolean confirmDialogClosed(Locator finalConfirmButton) {
+        try {
+            finalConfirmButton.waitFor(new Locator.WaitForOptions()
+                    .setState(WaitForSelectorState.HIDDEN)
+                    .setTimeout(FINAL_CONFIRM_HIDDEN_TIMEOUT_MS));
+            return true;
+        } catch (PlaywrightException exception) {
+            return false;
+        }
     }
 }
