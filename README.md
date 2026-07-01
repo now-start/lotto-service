@@ -75,8 +75,7 @@ services:
 - **동시성 상한**: `lotto.max-concurrent-sessions`로 동시에 뜨는 브라우저 세션 수를 제한합니다.
 - **작업 타임아웃**: 사용자 작업이 `lotto.user-task-timeout-ms`를 초과하면 실패로 처리합니다.
 
-## Config Refresh
+## Config
 
-- `LottoProperties`(`@ConfigurationProperties`)는 `POST /actuator/refresh` 시 재바인딩되어 `lotto.*` 변경값을 런타임에 반영합니다.
-- 스케줄러는 고정 `@Scheduled`가 아닌 동적 Trigger(`SchedulingConfigurer`)로 동작하여, 매 다음 실행 계산 시점에 현재 `lotto.cron.*`(및 `lotto.cron.zone`)를 다시 읽습니다. 따라서 refresh 이후 변경된 cron이 다음 실행부터 반영됩니다.
-- Actuator refresh endpoint: `POST /actuator/refresh`
+- `LottoProperties`(`@ConfigurationProperties`)는 기동 시 `lotto.*` 설정을 바인딩합니다.
+- 스케줄러는 `@Scheduled`로 동작하며, `lotto.cron.*` 및 `lotto.cron.zone` 값은 애플리케이션 기동 시점에 적용됩니다.

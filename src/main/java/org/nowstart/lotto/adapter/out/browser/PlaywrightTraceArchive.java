@@ -27,8 +27,7 @@ public class PlaywrightTraceArchive {
     private static final String TRACE_GLOB = "lotto-trace-*.zip";
     private final Object cleanupMonitor = new Object();
 
-    // 트레이스는 로그인 비밀번호 입력·계정/예치금 등 민감 정보를 캡처하므로, refresh로 즉시 끌 수 있도록
-    // 생성 시점 캡처(@Value) 대신 재바인딩되는 LottoProperties에서 매 호출 시 현재 값을 읽는다.
+    // 트레이스는 로그인 비밀번호 입력·계정/예치금 등 민감 정보를 캡처하므로 기본 비활성화한다.
     private final LottoProperties lottoProperties;
 
     @Value("${logging.file.path:./logs}")
