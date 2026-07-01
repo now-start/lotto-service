@@ -11,6 +11,8 @@ import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.nowstart.lotto.application.port.out.LottoAutomationSession;
 import org.nowstart.lotto.config.LottoProperties;
+import org.springframework.cloud.context.scope.refresh.RefreshScopeRefreshedEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -19,7 +21,8 @@ public class PlaywrightSessionManager {
 
     private final Supplier<BrowserType.LaunchOptions> browserLaunchOptions;
     private final PlaywrightTraceArchive playWrightTraceArchive;
-    private final Semaphore sessionLimiter;
+    private final LottoProperties lottoProperties;
+    private final ResizableSemaphore sessionLimiter;
 
     public PlaywrightSessionManager(
             Supplier<BrowserType.LaunchOptions> browserLaunchOptions,
@@ -28,7 +31,19 @@ public class PlaywrightSessionManager {
     ) {
         this.browserLaunchOptions = browserLaunchOptions;
         this.playWrightTraceArchive = playWrightTraceArchive;
-        this.sessionLimiter = new Semaphore(lottoProperties.getMaxConcurrentSessions(), true);
+        this.lottoProperties = lottoProperties;
+        this.sessionLimiter = new ResizableSemaphore(lottoProperties.getMaxConcurrentSessions());
+    }
+
+    /**
+     * /actuator/refresh 로 lotto.max-concurrent-sessions 가 바뀌면 세마포어 permit 수를 재조정한다.
+     * (LottoProperties 는 refresh 시 재바인딩되므로 현재 값을 읽어 반영)
+     */
+    @EventListener(RefreshScopeRefreshedEvent.class)
+    public void onRefresh(RefreshScopeRefreshedEvent event) {
+        int newLimit = lottoProperties.getMaxConcurrentSessions();
+        sessionLimiter.resize(newLimit);
+        log.info("[Session] max-concurrent-sessions resized to {}", newLimit);
     }
 
     public LottoAutomationSession openSession() {
@@ -95,6 +110,31 @@ public class PlaywrightSessionManager {
         closeQuietly(browser, "브라우저 종료 실패");
         closeQuietly(playwright, "Playwright 종료 실패");
         releasePermit.run();
+    }
+
+    /** 런타임에 permit 수를 조정할 수 있는 세마포어. */
+    private static final class ResizableSemaphore extends Semaphore {
+
+        private int currentPermits;
+
+        ResizableSemaphore(int permits) {
+            super(permits, true);
+            this.currentPermits = permits;
+        }
+
+        synchronized void resize(int newPermits) {
+            if (newPermits < 1) {
+                log.warn("[Session] 무시된 잘못된 max-concurrent-sessions 값: {}", newPermits);
+                return;
+            }
+            int delta = newPermits - currentPermits;
+            if (delta > 0) {
+                release(delta);
+            } else if (delta < 0) {
+                reducePermits(-delta);
+            }
+            currentPermits = newPermits;
+        }
     }
 
     private record PlaywrightLottoSession(

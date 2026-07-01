@@ -12,27 +12,30 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 import java.util.stream.StreamSupport;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.nowstart.lotto.config.LottoProperties;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class PlaywrightTraceArchive {
 
     private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
     private static final String TRACE_GLOB = "lotto-trace-*.zip";
     private final Object cleanupMonitor = new Object();
 
+    // 트레이스는 로그인 비밀번호 입력·계정/예치금 등 민감 정보를 캡처하므로, refresh로 즉시 끌 수 있도록
+    // 생성 시점 캡처(@Value) 대신 재바인딩되는 LottoProperties에서 매 호출 시 현재 값을 읽는다.
+    private final LottoProperties lottoProperties;
+
     @Value("${logging.file.path:./logs}")
     private String logPath;
 
     @Value("${logging.logback.rollingpolicy.max-history:7}")
     private int maxTraceFiles;
-
-    // 트레이스는 로그인 비밀번호 입력·계정/예치금 등 민감 정보를 캡처하므로 기본 비활성화한다.
-    @Value("${lotto.trace-enabled:false}")
-    private boolean traceEnabled;
 
     @PostConstruct
     void initialize() {
@@ -45,7 +48,7 @@ public class PlaywrightTraceArchive {
     }
 
     public void start(BrowserContext context) {
-        if (!traceEnabled) {
+        if (!isTraceEnabled()) {
             return;
         }
         context.tracing().start(new Tracing.StartOptions()
@@ -55,7 +58,7 @@ public class PlaywrightTraceArchive {
     }
 
     public void stop(BrowserContext context) {
-        if (!traceEnabled) {
+        if (!isTraceEnabled()) {
             return;
         }
         try {
@@ -67,6 +70,10 @@ public class PlaywrightTraceArchive {
         } catch (Exception exception) {
             log.warn("페이지 종료 중 오류 발생", exception);
         }
+    }
+
+    private boolean isTraceEnabled() {
+        return Boolean.TRUE.equals(lottoProperties.getTraceEnabled());
     }
 
     private void ensureLogDirectoryExists() throws IOException {
