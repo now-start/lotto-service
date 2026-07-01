@@ -20,13 +20,13 @@ public class LottoScheduleExecutor {
 
     private final LottoUseCase lottoUseCase;
 
-    @Scheduled(cron = "${lotto.cron.check}", zone = "${lotto.cron.zone}")
+    @Scheduled(cron = "${lotto.cron.check}", zone = "${lotto.cron.zone:Asia/Seoul}")
     public void checkLottoResults() {
         log.info("[Schedule] Check Start");
         lottoUseCase.check(TargetCommand.all(TriggerType.SCHEDULE));
     }
 
-    @Scheduled(cron = "${lotto.cron.buy}", zone = "${lotto.cron.zone}")
+    @Scheduled(cron = "${lotto.cron.buy}", zone = "${lotto.cron.zone:Asia/Seoul}")
     public void buyLottoTickets() {
         log.info("[Schedule] Purchase Start");
         lottoUseCase.purchase(TargetCommand.all(TriggerType.SCHEDULE));
