@@ -33,15 +33,17 @@ public class PlaywrightLoginExecutor {
             page.click(LottoBrowserConstants.LOGIN_LINK);
         }
 
-        Locator changeLaterLink = page.getByRole(
-                AriaRole.LINK,
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        Locator changeLaterButton = page.getByRole(
+                AriaRole.BUTTON,
                 new Page.GetByRoleOptions().setName(LottoBrowserConstants.CHANGE_LATER)
         );
-        if (changeLaterLink.isVisible()) {
-            changeLaterLink.click();
+        if (changeLaterButton.isVisible()) {
+            changeLaterButton.click();
+            page.waitForLoadState(LoadState.NETWORKIDLE);
         }
 
-        page.waitForLoadState(LoadState.NETWORKIDLE);
         page.navigate(LottoBrowserConstants.URL_MY_PAGE);
 
         LottoAccountSnapshot snapshot = new LottoAccountSnapshot(
