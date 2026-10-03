@@ -8,8 +8,17 @@ public interface SendNotificationPort {
             String subject,
             String text,
             byte[] inlineImage,
-            String to
+            String to,
+            Attachment attachment
     ) {
+
+        public NotificationMessage(String subject, String text, byte[] inlineImage, String to) {
+            this(subject, text, inlineImage, to, null);
+        }
+
+        public NotificationMessage withAttachment(Attachment attachment) {
+            return new NotificationMessage(subject, text, inlineImage, to, attachment);
+        }
 
         public NotificationMessage {
             inlineImage = inlineImage == null ? null : inlineImage.clone();
@@ -22,6 +31,17 @@ public interface SendNotificationPort {
 
         public boolean hasInlineImage() {
             return inlineImage != null && inlineImage.length > 0;
+        }
+    }
+
+    record Attachment(String filename, byte[] content) {
+        public Attachment {
+            content = content.clone();
+        }
+
+        @Override
+        public byte[] content() {
+            return content.clone();
         }
     }
 }

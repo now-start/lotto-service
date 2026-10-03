@@ -43,6 +43,11 @@ public class NotificationMailAdapter implements SendNotificationPort {
                 helper.setText(message.text(), false);
             }
 
+            if (message.attachment() != null) {
+                helper.addAttachment(message.attachment().filename(),
+                        new ByteArrayResource(message.attachment().content()), "application/zip");
+            }
+
             javaMailSender.send(helper.getMimeMessage());
             log.info("[Mail] Sent Success - to: {}, subject: {}", message.to(), message.subject());
         } catch (Exception exception) {

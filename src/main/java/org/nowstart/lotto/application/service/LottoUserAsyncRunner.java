@@ -47,7 +47,8 @@ public class LottoUserAsyncRunner implements LottoUserRunner {
         List<CheckResult> results = null;
         String abortPhase = null;
         boolean checkAbortedAfterCompletion = false;
-        try (LottoAutomationSession session = lottoAutomationPort.openSession()) {
+        LottoAutomationSession openedSession = null;
+        try (LottoAutomationSession session = openedSession = lottoAutomationPort.openSession()) {
             try {
                 if (abortSignal.get()) {
                     session.markFailed();
@@ -82,17 +83,17 @@ public class LottoUserAsyncRunner implements LottoUserRunner {
         } catch (LottoAutomationException exception) {
             // try-with-resources가 세션을 이미 닫음(permit 해제) → 아래 통지가 브라우저 슬롯을 점유하지 않는다.
             log.error("[Task][{}] Failed mode={} step={}", user.id(), mode, exception.getStepType(), exception);
-            sendNotification(user, lottoNotificationFactory.createFailureMessage(user, mode, exception), "failure");
+            sendNotification(user, withTrace(lottoNotificationFactory.createFailureMessage(user, mode, exception), openedSession), "failure");
             return false;
         } catch (Exception exception) {
             log.error("[Task][{}] Failed mode={} step=unknown", user.id(), mode, exception);
-            sendNotification(user, lottoNotificationFactory.createFailureMessage(user, mode, exception), "failure");
+            sendNotification(user, withTrace(lottoNotificationFactory.createFailureMessage(user, mode, exception), openedSession), "failure");
             return false;
         }
 
         // 여기서부터 세션이 닫혀(permit 해제된) 상태 → 통지는 브라우저 슬롯을 붙잡지 않는다.
         if (abortPhase != null) {
-            return aborted(user, mode, abortPhase);
+            return aborted(user, mode, abortPhase, openedSession);
         }
         if (checkAbortedAfterCompletion || mode == TaskMode.CHECK && abortSignal.get()) {
             // CHECK 진행 중 호출자 타임아웃 → 호출자는 이미 실패 보고. 뒤늦은 성공 통지로 상태 불일치를 만들지 않는다.
@@ -119,15 +120,24 @@ public class LottoUserAsyncRunner implements LottoUserRunner {
      * CHECK는 조회 미수행이 치명적이지 않으므로 통지하지 않는다(호출자가 이미 타임아웃 실패로 보고).
      */
     private boolean aborted(LottoUser user, TaskMode mode, String phase) {
+        return aborted(user, mode, phase, null);
+    }
+
+    private boolean aborted(LottoUser user, TaskMode mode, String phase, LottoAutomationSession session) {
         log.warn("[Task][{}] Aborted ({}) - 호출자 타임아웃 mode={}", user.id(), phase, mode);
         if (mode == TaskMode.PURCHASE) {
             LottoAutomationException abortException = new LottoAutomationException(
                     StepType.PURCHASE,
                     user.id(),
                     new IllegalStateException("구매가 최종 확정 전에 중단/미제출되었습니다 (" + phase + ")"));
-            sendNotification(user, lottoNotificationFactory.createFailureMessage(user, mode, abortException), "failure");
+            sendNotification(user, withTrace(lottoNotificationFactory.createFailureMessage(user, mode, abortException), session), "failure");
         }
         return false;
+    }
+
+    private NotificationMessage withTrace(NotificationMessage message, LottoAutomationSession session) {
+        var trace = session == null ? null : session.failureTrace();
+        return trace == null ? message : message.withAttachment(trace);
     }
 
     private void sendNotification(LottoUser user, NotificationMessage message, String kind) {

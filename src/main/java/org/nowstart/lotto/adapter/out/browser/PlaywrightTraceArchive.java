@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 import java.util.stream.StreamSupport;
+import org.nowstart.lotto.application.port.out.SendNotificationPort.Attachment;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -47,19 +48,28 @@ public class PlaywrightTraceArchive {
                 .setSources(true));
     }
 
-    public void stop(BrowserContext context, boolean saveTrace) {
+    public Attachment stop(BrowserContext context, boolean saveTrace) {
         try {
             if (!saveTrace) {
                 context.tracing().stop();
-                return;
+                return null;
             }
-            String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMATTER);
-            String traceId = UUID.randomUUID().toString().substring(0, 8);
-            Path tracePath = Paths.get(logPath, "lotto-trace-" + timestamp + "-" + traceId + ".zip");
-            context.tracing().stop(new Tracing.StopOptions().setPath(tracePath));
-            cleanupOldTraceFiles();
+            synchronized (cleanupMonitor) {
+                String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMATTER);
+                String traceId = UUID.randomUUID().toString().substring(0, 8);
+                Path tracePath = Paths.get(logPath, "lotto-trace-" + timestamp + "-" + traceId + ".zip");
+                context.tracing().stop(new Tracing.StopOptions().setPath(tracePath));
+                Attachment attachment = new Attachment(tracePath.getFileName().toString(), Files.readAllBytes(tracePath));
+                try {
+                    cleanupOldTraceFiles();
+                } catch (IOException exception) {
+                    log.warn("트레이스 정리 중 오류 발생", exception);
+                }
+                return attachment;
+            }
         } catch (Exception exception) {
             log.warn("트레이스 종료 중 오류 발생", exception);
+            return null;
         }
     }
 

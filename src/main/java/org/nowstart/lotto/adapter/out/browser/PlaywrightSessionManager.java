@@ -8,6 +8,8 @@ import com.microsoft.playwright.Playwright;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import org.nowstart.lotto.application.port.out.SendNotificationPort.Attachment;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.nowstart.lotto.application.port.out.LottoAutomationSession;
@@ -63,6 +65,7 @@ public class PlaywrightSessionManager {
                     playwright,
                     playWrightTraceArchive,
                     new AtomicBoolean(false),
+                    new AtomicReference<>(),
                     releasePermit
             );
         } catch (RuntimeException exception) {
@@ -121,6 +124,7 @@ public class PlaywrightSessionManager {
             Playwright playwright,
             PlaywrightTraceArchive playWrightTraceArchive,
             AtomicBoolean failed,
+            AtomicReference<Attachment> trace,
             Runnable releasePermit
     ) implements LottoAutomationSession {
 
@@ -130,9 +134,14 @@ public class PlaywrightSessionManager {
         }
 
         @Override
+        public Attachment failureTrace() {
+            return trace.get();
+        }
+
+        @Override
         public void close() {
             try {
-                playWrightTraceArchive.stop(context, failed.get());
+                trace.set(playWrightTraceArchive.stop(context, failed.get()));
             } finally {
                 try {
                     closePage();

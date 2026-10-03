@@ -155,6 +155,31 @@ class LottoUserAsyncRunnerTest {
                 .isSameAs(fatalError);
     }
 
+    @Test
+    void shouldAttachTraceAfterClosingFailedSession() {
+        LottoUser user = createUser("user1");
+        NotificationMessage message = new NotificationMessage("failure", "text", null, "user1@nowstart.org");
+        var attachment = new SendNotificationPort.Attachment("lotto-trace-user1.zip", new byte[] {1, 2, 3});
+        given(lottoAutomationPort.openSession()).willReturn(session);
+        given(lottoAutomationPort.login(session, user)).willThrow(new IllegalStateException("failed"));
+        given(lottoNotificationFactory.createFailureMessage(eq(user), eq(TaskMode.PURCHASE), any(Exception.class)))
+                .willReturn(message);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            given(session.failureTrace()).willReturn(attachment);
+            return null;
+        }).when(session).close();
+
+        then(lottoUserAsyncRunner.runAsync(user, TaskMode.PURCHASE, new AtomicBoolean(false)).join()).isFalse();
+
+        var captor = org.mockito.ArgumentCaptor.forClass(NotificationMessage.class);
+        InOrder order = inOrder(session, sendNotificationPort);
+        order.verify(session).markFailed();
+        order.verify(session).close();
+        order.verify(sendNotificationPort).send(captor.capture());
+        then(captor.getValue().attachment()).isSameAs(attachment);
+        then(captor.getValue().attachment().content()).containsExactly((byte) 1, (byte) 2, (byte) 3);
+    }
+
     private LottoUser createUser(String id) {
         return new LottoUser(id, "password", 1, id + "@nowstart.org", false);
     }
