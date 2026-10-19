@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'org.nowstart'
-version = '9.4.2'
+version = '9.4.3'
 
 springBoot {
     buildInfo()
@@ -70,5 +70,9 @@ bootRun {
 }
 
 bootBuildImage {
+    buildpacks = ['urn:cnb:builder:paketo-buildpacks/java', 'docker.io/paketobuildpacks/health-checker:latest']
+    environment.put('BP_HEALTH_CHECKER_ENABLED', 'true')
+    environment.put('BPE_DEFAULT_THC_PORT', '8081')
+    environment.put('BPE_DEFAULT_THC_PATH', '/actuator/health/liveness')
     runImage = "mcr.microsoft.com/playwright/java:v$playwrightVersion"
 }
