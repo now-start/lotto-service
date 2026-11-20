@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'org.nowstart'
-version = '9.4.5'
+version = '9.4.6'
 
 springBoot {
     buildInfo()
@@ -70,7 +70,5 @@ bootRun {
 }
 
 bootBuildImage {
-    buildpacks = ['urn:cnb:builder:paketo-buildpacks/java', 'docker.io/paketobuildpacks/health-checker:latest']
-    environment.put('BP_HEALTH_CHECKER_ENABLED', 'true')
     runImage = "mcr.microsoft.com/playwright/java:v$playwrightVersion"
 }
