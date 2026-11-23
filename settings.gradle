@@ -1,1 +1,10 @@
 rootProject.name = 'lotto-service'
+
+// 루트 프로젝트가 실행 앱(bootJar/bootBuildImage)이고, 레이어는 하위 모듈로 분리한다.
+// 의존 방향: adapter-* → application → domain, 루트 → 전부. 어댑터끼리는 서로 의존하지 않는다.
+include 'lotto-domain'
+include 'lotto-application'
+include 'lotto-adapter-web'
+include 'lotto-adapter-scheduler'
+include 'lotto-adapter-browser'
+include 'lotto-adapter-mail'

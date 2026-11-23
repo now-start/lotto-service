@@ -1,218 +1,59 @@
 # Lotto Service Clean Architecture
 
-현재 코드는 `application/service` 를 단순하게 유지하는 방향으로 정리되어 있다.
+Kotlin + Gradle 멀티모듈 구성이다. 레이어 의존 방향은 각 모듈의 `build.gradle` 선언이 강제한다(어댑터끼리는 서로 의존할 수 없다).
 
-- 퍼블릭 유즈케이스: `check`, `purchase`
-- 내부 자동화 step: `login`, `check`, `buy`
-- 공통 실행 로직은 별도 service 파일로 분리하지 않고 `LottoInteractor` 내부 private 메서드로 둔다
-
-## Package Tree
+## 모듈
 
 ```text
-org.nowstart.lotto
-├─ LottoServiceApplication                                        [class, @SpringBootApplication]
-├─ config
-│  ├─ ApplicationConfig                                           [class, @Configuration]
-│  ├─ LottoProperties                                             [class, @ConfigurationProperties, @Validated]
-│  ├─ PlaywrightConfig                                            [class, @Configuration]
-│  └─ SwaggerConfig                                               [class, @Configuration]
-├─ domain
-│  ├─ type
-│  │  ├─ ExecutionStatus                                          [enum]
-│  │  ├─ MessageType                                              [enum]
-│  │  ├─ StepType                                                 [enum]
-│  │  ├─ TaskMode                                                 [enum: CHECK, PURCHASE]
-│  │  └─ TriggerType                                              [enum]
-│  └─ exception
-│     ├─ InvalidManualUserSelectionException                      [class]
-│     ├─ LottoAutomationException                                 [class]
-│     └─ NotificationSendException                                [class]
-├─ application
-│  ├─ port
-│  │  ├─ in
-│  │  │  ├─ LottoUseCase                                          [interface + TargetCommand + LottoExecution]
-│  │  │  └─ InitializeLottoUseCase                                [interface, initialize()]
-│  │  └─ out
-│  │     ├─ LoadLottoUsersPort                                    [interface + LottoUser]
-│  │     ├─ LottoAutomationPort                                   [interface + LottoAccountSnapshot + LottoResult + CheckResult + PurchaseReceipt]
-│  │     ├─ LottoAutomationSession                                [interface]
-│  │     └─ SendNotificationPort                                  [interface + NotificationMessage]
-│  └─ service
-│     ├─ InitializeLottoInteractor                                [class, @Service]
-│     ├─ LottoInteractor                                          [class, @Service]
-│     └─ LottoNotificationFactory                                 [class, no annotation, @Bean 등록]
-└─ adapter
-   ├─ in
-   │  ├─ scheduler
-   │  │  └─ LottoScheduleExecutor                                 [class, @Component]
-   │  ├─ startup
-   │  │  └─ LottoInitializationRunner                             [class, @Component]
-   │  └─ web
-   │     ├─ LottoManualController                                 [class, @RestController]
-   │     └─ response
-   │        ├─ LottoExecutionResponse                             [record]
-   │        └─ ManualExecutionErrorResponse                       [record]
-   └─ out
-      ├─ browser
-      │  ├─ LottoAutomationPlaywrightAdapter                      [class, @Component]
-      │  ├─ LottoBrowserConstants                                 [class]
-      │  ├─ PlaywrightLoginExecutor                               [class, @Component]
-      │  ├─ PlaywrightPurchaseExecutor                            [class, @Component]
-      │  ├─ PlaywrightResultExecutor                              [class, @Component]
-      │  ├─ PlaywrightSessionManager                              [class, @Component]
-      │  └─ PlaywrightTraceArchive                                [class, @Component]
-      ├─ mail
-      │  └─ NotificationMailAdapter                               [class, @Component]
-      └─ properties
-         └─ LottoUsersPropertiesAdapter                           [class, @Component]
+lotto-service (루트: 실행 앱)            bootJar/bootBuildImage, version, buildInfo
+│   LottoServiceApplication             @SpringBootApplication (패키지 org.nowstart.lotto)
+│   config/LottoProperties              lotto.* 설정 (키 이름 유지)
+│   config/ApplicationConfig            LottoProperties → ExecutionSettings·BrowserSettings, Clock, 달력, 실행기
+│   adapter/outbound/properties         LoadLottoUsersPort 구현 (설정의 사용자 목록)
+│
+├─ lotto-domain                         순수 Kotlin (프레임워크 의존 없음)
+│     type/                             ExecutionStatus, MessageType, StepType, TaskMode, TriggerType
+│     exception/                        LottoAutomationException, NotificationSendException, LedgerUnreadableException
+│     calendar/LottoDrawCalendar        회차(1회차 2002-12-07, 주 단위)·판매 시간(06~24시, 토 20시 마감)
+│     ledger/                           LedgerEntry, LedgerMath, PurchasePlan, Won (구매 수량 계산)
+│
+├─ lotto-application                    api(lotto-domain), spring-context
+│     port/inbound/                     LottoUseCase, InitializeLottoUseCase, TargetCommand, LottoExecution
+│     port/outbound/                    LottoAutomationPort(+세션·원장 값), SendNotificationPort, LoadLottoUsersPort
+│     service/                          LottoInteractor, LottoUserAsyncRunner, LottoPurchaseProcedure,
+│                                       PurchaseOutcome, UncertainPurchaseRegistry, LottoNotificationFactory
+│
+├─ lotto-adapter-web                    LottoManualController (POST /api/lotto/check, /buy)
+├─ lotto-adapter-scheduler              크론 스케줄러, 기동 초기화 러너
+├─ lotto-adapter-browser                Playwright: 세션·트레이스·로그인·구매·원장 판독
+└─ lotto-adapter-mail                   메일 발송, SMTP 실패 분류, 재발송 대기열(outbox)
 ```
 
-## Dependency Diagram
+## 의존 방향
 
 ```mermaid
 flowchart LR
-  classDef inbound fill:#fff7e6,stroke:#ef6c00,color:#111;
-  classDef app fill:#eef4ff,stroke:#1565c0,color:#111;
-  classDef out fill:#fff1f2,stroke:#c62828,color:#111;
-  classDef infra fill:#f7f7f7,stroke:#555,color:#111;
-  classDef domain fill:#eef7ee,stroke:#2e7d32,color:#111;
-
-  subgraph INBOUND["Inbound Adapters"]
-    direction TB
-    CTRL["adapter.in.web.LottoManualController<br/>class @RestController"]:::inbound
-    SCHED["adapter.in.scheduler.LottoScheduleExecutor<br/>class @Component"]:::inbound
-    INITRUN["adapter.in.startup.LottoInitializationRunner<br/>class @Component"]:::inbound
-  end
-
-  subgraph INPORTS["Application In Ports"]
-    direction TB
-    LOTTOIN["application.port.in.LottoUseCase<br/>interface + TargetCommand/LottoExecution<br/>check(command)<br/>purchase(command)"]:::app
-    INITIN["application.port.in.InitializeLottoUseCase<br/>interface"]:::app
-  end
-
-  subgraph APP["Application Services"]
-    direction TB
-    LOTTOUC["application.service.LottoInteractor<br/>class @Service"]:::app
-    INITUC["application.service.InitializeLottoInteractor<br/>class @Service"]:::app
-    FACTORY["application.service.LottoNotificationFactory<br/>class @Bean"]:::app
-  end
-
-  subgraph OUTPORTS["Application Out Ports"]
-    direction TB
-    USERPORT["application.port.out.LoadLottoUsersPort<br/>interface + LottoUser"]:::app
-    AUTOPORT["application.port.out.LottoAutomationPort<br/>interface<br/>nested LottoAccountSnapshot/LottoResult/CheckResult/PurchaseReceipt<br/>login(session,user)<br/>buy(session,user)<br/>check(session)<br/>check(session,receipt)"]:::app
-    SESSIONPORT["application.port.out.LottoAutomationSession<br/>interface"]:::app
-    NOTIPORT["application.port.out.SendNotificationPort<br/>interface + NotificationMessage"]:::app
-  end
-
-  subgraph OUTBOUND["Outbound Adapters"]
-    direction TB
-    USERAD["adapter.out.properties.LottoUsersPropertiesAdapter<br/>class @Component"]:::out
-    AUTOAD["adapter.out.browser.LottoAutomationPlaywrightAdapter<br/>class @Component"]:::out
-    LOGINEX["adapter.out.browser.PlaywrightLoginExecutor<br/>class @Component"]:::out
-    BUYEX["adapter.out.browser.PlaywrightPurchaseExecutor<br/>class @Component"]:::out
-    RESULTEX["adapter.out.browser.PlaywrightResultExecutor<br/>class @Component"]:::out
-    SESSIONM["adapter.out.browser.PlaywrightSessionManager<br/>class @Component"]:::out
-    TRACE["adapter.out.browser.PlaywrightTraceArchive<br/>class @Component"]:::out
-    MAILAD["adapter.out.mail.NotificationMailAdapter<br/>class @Component"]:::out
-  end
-
-  subgraph CONFIG["Config / Framework"]
-    direction TB
-    APPCFG["config.ApplicationConfig<br/>class @Configuration"]:::infra
-    LOTTOCFG["config.LottoProperties<br/>class @ConfigurationProperties @Validated"]:::infra
-    PLAYCFG["config.PlaywrightConfig<br/>class @Configuration"]:::infra
-    SPRINGMAIL["JavaMailSender"]:::infra
-    PLAYWRIGHT["Playwright / Browser"]:::infra
-  end
-
-  subgraph DOMAIN["Domain"]
-    direction TB
-    MODE["domain.type.TaskMode<br/>enum CHECK/PURCHASE"]:::domain
-    TRIGGER["domain.type.TriggerType<br/>enum"]:::domain
-    STEP["domain.type.StepType<br/>enum LOGIN/CHECK/PURCHASE"]:::domain
-  end
-
-  CTRL -->|/check, /buy| LOTTOIN
-  SCHED -->|check cron, buy cron| LOTTOIN
-  INITRUN -->|startup| INITIN
-
-  LOTTOUC -. implements .-> LOTTOIN
-  INITUC -. implements .-> INITIN
-
-  LOTTOUC --> USERPORT
-  LOTTOUC --> AUTOPORT
-  LOTTOUC --> NOTIPORT
-  LOTTOUC --> FACTORY
-  LOTTOUC --> LOTTOIN
-  LOTTOUC --> MODE
-  LOTTOUC --> TRIGGER
-  LOTTOUC --> STEP
-
-  INITUC --> USERPORT
-  INITUC --> AUTOPORT
-  INITUC --> NOTIPORT
-  INITUC --> FACTORY
-
-  USERAD -. implements .-> USERPORT
-  AUTOAD -. implements .-> AUTOPORT
-  MAILAD -. implements .-> NOTIPORT
-
-  AUTOAD --> LOGINEX
-  AUTOAD --> BUYEX
-  AUTOAD --> RESULTEX
-  AUTOAD --> SESSIONM
-  AUTOAD --> TRACE
-
-  USERAD --> LOTTOCFG
-  MAILAD --> SPRINGMAIL
-  SESSIONM --> PLAYWRIGHT
-  PLAYCFG --> PLAYWRIGHT
-  APPCFG --> FACTORY
+  root["lotto-service (bootstrap)"] --> web["lotto-adapter-web"]
+  root --> scheduler["lotto-adapter-scheduler"]
+  root --> browser["lotto-adapter-browser"]
+  root --> mail["lotto-adapter-mail"]
+  web --> app["lotto-application"]
+  scheduler --> app
+  browser --> app
+  mail --> app
+  app --> domain["lotto-domain"]
 ```
 
-## 핵심 구조
+## 구매 흐름 (멱등)
 
-```text
-Controller / Scheduler (Adapter In)
-  -> LottoUseCase.check(...) / LottoUseCase.purchase(...)
-    <- LottoInteractor
-      -> LoadLottoUsersPort
-      -> LottoAutomationPort
-      -> SendNotificationPort
-        <- PropertiesAdapter / PlaywrightAdapter / MailAdapter
-```
+1. `LottoPurchaseProcedure.precheck`: 판매 시간 밖이거나 같은 (계정, 회차)가 판정 대기 중이면 브라우저를 열지 않는다.
+2. 로그인 → 원장을 fail-closed로 읽는다(행도 빈 결과 표시도 없으면 판독 불가 → 구매하지 않음).
+3. `PurchasePlan`: `min(count, 5) - 이번 회차 구매 수량`만 산다. 0이면 "이미 구매됨".
+4. 확정 클릭 뒤에는 원장 새 행(클릭 전후 비교)·예치금 차감·클릭 후 거부 문구만으로 결과를 정한다.
+   그 외(클릭 후 예외 포함)는 `Uncertain`이며 `UncertainPurchaseRegistry`가 10분간 같은 회차 재구매를 막는다.
 
-즉:
+## 원칙
 
-- 어댑터가 `check` 와 `purchase` 중 무엇을 호출할지 결정
-- `LottoInteractor` 가 유저 선택, 배치 실행, step 호출, 알림 처리까지 담당
-- `login`, `check`, `buy` 는 내부 자동화 step 으로만 사용
-
-추가로 `purchase` 는 내부적으로 `login -> buy -> check(session, receipt)` 순서로 동작한다.
-구매 후 조회는 구매 수량과 상태가 일치하는 최신 구매 row 만 메일 대상으로 삼아, 직전 회차 스크린샷이 잘못 발송되지 않게 한다.
-`LottoResult` 는 순수 결과 값만 들고, 스크린샷과 구매 조회용 영수증 값은 `application.port.out.LottoAutomationPort` 내부 값으로 한정되어 메일 생성과 자동화 포트 계약에만 사용한다.
-
-## Spring Annotation Rules
-
-| Package | 포함 가능 | 포함하지 않음 |
-| --- | --- | --- |
-| `org.nowstart.lotto.config` | `@Configuration`, `@Bean`, `@ConfigurationProperties`, `@Validated` | `@RestController`, `@Entity` |
-| `org.nowstart.lotto.domain.*` | 없음 | 모든 Spring annotation, `@Transactional`, JPA annotation |
-| `org.nowstart.lotto.application.port.*` | 없음 | 모든 Spring annotation |
-| `org.nowstart.lotto.application.service` | `@Service` | `@RestController`, `@Repository`, JPA annotation |
-| `org.nowstart.lotto.adapter.in.web` | `@RestController`, `@RequestMapping`, `@PostMapping`, `@ExceptionHandler` | `@Service`, `@Repository` |
-| `org.nowstart.lotto.adapter.in.scheduler` | `@Component`, `@Scheduled` | `@RestController`, `@Repository` |
-| `org.nowstart.lotto.adapter.in.startup` | `@Component` | `@RestController`, `@Repository` |
-| `org.nowstart.lotto.adapter.out.browser` | `@Component` | `@RestController`, JPA annotation |
-| `org.nowstart.lotto.adapter.out.mail` | `@Component` | `@RestController`, JPA annotation |
-| `org.nowstart.lotto.adapter.out.properties` | `@Component` | `@RestController`, JPA annotation |
-
-## Transaction Boundary
-
-- 현재 구조에는 DB 저장이 없으므로 `@Transactional` 경계가 없다.
-- Playwright 자동화와 메일 발송은 외부 I/O 이고, 하나의 ACID 트랜잭션으로 묶을 대상이 아니다.
-- 나중에 DB 저장이 생기면:
-  - `application.port.out` 에 저장 포트를 추가하고
-  - `adapter.out.persistence` 에 구현체를 두고
-  - 실제 DB write 를 수행하는 애플리케이션 서비스 경계에만 `@Transactional` 을 둔다.
+- 설정은 루트의 `LottoProperties` 한 곳에서 읽고, 모듈에는 설정 레코드(`ExecutionSettings`, `BrowserSettings`)만 넘긴다.
+- 사이트 규칙(판매 시간, 회차, 원장 반영 지연, 재발송 간격)은 설정이 아니라 코드 상수다.
+- 패키지명은 `org.nowstart.lotto.*`로 통일해 루트의 컴포넌트 스캔이 모든 모듈을 찾는다. `in`은 Kotlin 예약어라 `inbound`/`outbound`를 쓴다.

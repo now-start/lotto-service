@@ -80,6 +80,21 @@ services:
 - **실패 진단 자료**: Playwright trace는 **로그인 이후부터** DOM 스냅샷만 기록합니다(비밀번호 입력이 남지 않음). 실패 시 `lotto-trace-*.zip`으로 저장해 메일에 첨부하고, 로그인 전 실패는 화면 캡처(PNG)를 첨부합니다.
 - **알림 유실 방지**: 첨부가 5MB를 넘거나 메일 서버가 크기 초과(552)로 거부하면 첨부 없이 보냅니다. 접속 실패 같은 일시 장애는 메모리 대기열에 넣어 10분마다 48시간까지 다시 보냅니다(재시작 시 대기열은 사라짐). 실패는 `lotto.notification.failed`, 대기열 크기는 `lotto.notification.outbox.size` 메트릭으로 볼 수 있습니다.
 
+## 구조
+
+Kotlin + Gradle 멀티모듈입니다. 루트 프로젝트가 실행 앱(`bootJar`/`bootBuildImage`)이고, 레이어는 하위 모듈로 나뉩니다.
+
+| 모듈 | 내용 |
+|------|------|
+| `lotto-domain` | 순수 Kotlin 도메인: 판매 달력·회차, 원장 계산, 타입·예외 |
+| `lotto-application` | 포트(inbound/outbound)와 서비스(구매 절차, 작업 실행, 알림 생성) |
+| `lotto-adapter-web` | 수동 실행 API |
+| `lotto-adapter-scheduler` | 크론 스케줄, 기동 초기화 |
+| `lotto-adapter-browser` | Playwright 자동화 |
+| `lotto-adapter-mail` | 메일 발송·재발송 대기열 |
+
+자세한 구조는 [docs/clean-architecture.md](docs/clean-architecture.md)를 참고하세요.
+
 ## Config
 
 - `LottoProperties`(`@ConfigurationProperties`)는 기동 시 `lotto.*` 설정을 바인딩합니다.
