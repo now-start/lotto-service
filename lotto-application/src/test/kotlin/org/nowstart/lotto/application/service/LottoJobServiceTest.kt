@@ -38,7 +38,8 @@ class LottoJobServiceTest {
     private val notifier = mockk<JobNotifier>(relaxed = true)
     private val user = LottoUser("user1", "password", 5, "user1@nowstart.org", false)
     private val account = LottoAccountSnapshot("홍길동", "60,000원")
-    private val service = LottoJobService(usersPort, attemptRunner, notifier, LottoDrawCalendar(clock), scheduler, Executor { it.run() })
+    private val service =
+        LottoJobService(usersPort, attemptRunner, notifier, LottoDrawCalendar(clock), scheduler, Executor { it.run() }, AccountLocks())
 
     init {
         every { usersPort.loadUsers() } returns listOf(user)

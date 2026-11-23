@@ -3,6 +3,7 @@ package org.nowstart.lotto.adapter.outbound.browser
 import com.microsoft.playwright.Locator
 import com.microsoft.playwright.Page
 import com.microsoft.playwright.PlaywrightException
+import com.microsoft.playwright.TimeoutError
 import com.microsoft.playwright.options.AriaRole
 import com.microsoft.playwright.options.LoadState
 import com.microsoft.playwright.options.WaitForSelectorState
@@ -32,8 +33,8 @@ class PlaywrightLoginExecutor {
         }
 
         page.waitForLoadState(LoadState.NETWORKIDLE)
-        if (submitted && idInput.isVisible) {
-            // 응답은 왔는데 로그인 폼이 그대로다 = 아이디/비밀번호 거부(시간 초과 같은 사이트 장애와 구분한다).
+        if (submitted && !loginFormDisappeared(idInput)) {
+            // 충분히 기다려도 로그인 폼이 그대로다 = 아이디/비밀번호 거부(시간 초과 같은 사이트 장애와 구분한다).
             throw LoginRejectedException("로그인이 거부되었습니다. 아이디/비밀번호를 확인하세요 user=${user.id}")
         }
 
@@ -57,6 +58,14 @@ class PlaywrightLoginExecutor {
         )
     }
 
+    /** XHR 제출 후 늦게 이동하는 경우가 있으므로 폼이 사라지기를 기다린 뒤에만 거부로 판정한다. */
+    private fun loginFormDisappeared(idInput: Locator): Boolean = try {
+        idInput.waitFor(Locator.WaitForOptions().setState(WaitForSelectorState.HIDDEN).setTimeout(LOGIN_FORM_HIDE_TIMEOUT_MS))
+        true
+    } catch (exception: TimeoutError) {
+        !idInput.isVisible
+    }
+
     private fun waitForLoginFormOrSkip(idInput: Locator) {
         try {
             idInput.waitFor(Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5_000.0))
@@ -66,3 +75,6 @@ class PlaywrightLoginExecutor {
         }
     }
 }
+
+/** 로그인 제출 후 폼이 사라지기를 기다리는 시간(사이트가 느려도 정상 로그인을 거부로 오판하지 않도록 넉넉히). */
+private const val LOGIN_FORM_HIDE_TIMEOUT_MS = 30_000.0

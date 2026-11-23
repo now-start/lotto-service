@@ -17,6 +17,7 @@ class InitializeLottoInteractor(
     private val lottoAutomationPort: LottoAutomationPort,
     private val sendNotificationPort: SendNotificationPort,
     private val lottoNotificationFactory: LottoNotificationFactory,
+    private val accountLocks: AccountLocks,
 ) : InitializeLottoUseCase {
 
     /** 기동을 막지 않도록 별도 스레드에서 돈다(사이트가 느리면 로그인에 수 분이 걸린다). */
@@ -25,6 +26,11 @@ class InitializeLottoInteractor(
         for (user in loadLottoUsersPort.loadUsers()) {
             if (!user.init) {
                 log.info("[Init][{}] Skip", user.id)
+                continue
+            }
+            if (!accountLocks.tryAcquire(user.id)) {
+                // 같은 계정 작업이 브라우저를 쓰는 중이면 두 번째 로그인으로 그 세션을 끊지 않도록 건너뛴다.
+                log.warn("[Init][{}] Skip - 같은 계정 작업이 실행 중", user.id)
                 continue
             }
             log.info("[Init][{}] Start", user.id)
@@ -41,6 +47,8 @@ class InitializeLottoInteractor(
                 }
             } catch (exception: Exception) {
                 log.error("[Init][{}] Failed", user.id, exception)
+            } finally {
+                accountLocks.release(user.id)
             }
             log.info("[Init][{}] Complete", user.id)
         }

@@ -2,8 +2,10 @@ package org.nowstart.lotto.adapter.outbound.browser
 
 import com.microsoft.playwright.Locator
 import com.microsoft.playwright.Page
+import com.microsoft.playwright.TimeoutError
 import com.microsoft.playwright.options.AriaRole
 import com.microsoft.playwright.options.LoadState
+import com.microsoft.playwright.options.WaitForSelectorState
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -48,6 +50,7 @@ class PlaywrightLoginExecutorTest {
         val idInput = mockk<Locator>(relaxed = true)
         every { page.getByPlaceholder(LottoBrowserConstants.ID_INPUT) } returns idInput
         every { idInput.isVisible } returns true
+        every { idInput.waitFor(match { it.state == WaitForSelectorState.HIDDEN }) } throws TimeoutError("form still visible")
 
         assertThatThrownBy { PlaywrightLoginExecutor().login(page, LottoUser("user1", "wrong", 1, "user1@nowstart.org", false)) }
             .isInstanceOf(LoginRejectedException::class.java)

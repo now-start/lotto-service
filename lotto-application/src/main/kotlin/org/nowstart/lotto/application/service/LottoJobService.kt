@@ -48,11 +48,11 @@ class LottoJobService(
     private val calendar: LottoDrawCalendar,
     private val taskScheduler: TaskScheduler,
     @Qualifier("lottoTaskExecutor") private val executor: Executor,
+    private val accountLocks: AccountLocks,
 ) : LottoUseCase, SmartLifecycle {
 
     private val executions = ConcurrentHashMap<String, Execution>()
     private val activeJobs = HashMap<JobKey, UserJob>()
-    private val busyAccounts: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     @Volatile
     private var accepting = true
@@ -113,10 +113,10 @@ class LottoJobService(
             }
         }
         if (!accepting) {
-            finish(job, JobState.ABORTED, "서비스 종료로 중단", null)
+            finish(job, JobState.ABORTED, "서비스 종료로 중단") { notifyShutdown(job) }
             return
         }
-        if (!busyAccounts.add(job.user.id)) {
+        if (!accountLocks.tryAcquire(job.user.id)) {
             // 같은 계정의 다른 작업(확인/구매)이 브라우저를 쓰는 중이다. 시도로 세지 않고 잠시 뒤 다시 본다.
             schedule(job, now().plus(ACCOUNT_BUSY_DELAY), job.state)
             return
@@ -127,6 +127,10 @@ class LottoJobService(
                 job.attempts++
                 job.nextAttemptAt = null
                 job.abortSignal.set(false)
+                // stop()이 위 확인과 이 초기화 사이에 중단 신호를 보냈다면 지워지지 않도록 다시 켠다.
+                if (!accepting) {
+                    job.abortSignal.set(true)
+                }
             }
             log.info("[Job][{}] Attempt {} mode={} round={}", job.user.id, job.attempts, job.mode, job.round)
             val watchdog = taskScheduler.schedule({ job.abortSignal.set(true) }, now().plus(ATTEMPT_LIMIT))
@@ -144,11 +148,15 @@ class LottoJobService(
                 throw failure
             }
         } finally {
-            busyAccounts.remove(job.user.id)
+            accountLocks.release(job.user.id)
         }
     }
 
     private fun decide(job: UserJob, result: AttemptResult) {
+        if (result !is AttemptResult.Failed) {
+            // 로그인이 된 시도가 있었으면 '연속 거부'가 끊긴 것이다.
+            job.resetLoginRejections()
+        }
         when (result) {
             is AttemptResult.Purchase -> decidePurchase(job, result)
             is AttemptResult.Checked -> decideCheck(job, result)
@@ -268,26 +276,40 @@ class LottoJobService(
         lifecycleRunning = true
     }
 
-    /** 새 시도를 막고 실행 중인 시도에 중단 신호를 보낸 뒤(결제 직전이면 멈춤) 끝날 때까지 기다린다. */
+    /**
+     * 새 시도를 막고 실행 중인 시도에 중단 신호를 보낸 뒤(결제 직전이면 멈춤) 끝날 때까지 기다린다.
+     * 다음 시도를 기다리던 작업은 재시작하면 사라지므로 중단으로 끝내고 알린다.
+     */
     override fun stop() {
         accepting = false
         val active = synchronized(activeJobs) { activeJobs.values.toList() }
         active.forEach { it.abortSignal.set(true) }
         val waitUntil = System.nanoTime() + SHUTDOWN_WAIT.toNanos()
-        while (busyAccounts.isNotEmpty() && System.nanoTime() < waitUntil) {
+        while (!accountLocks.isIdle() && System.nanoTime() < waitUntil) {
             Thread.sleep(SHUTDOWN_POLL.toMillis())
         }
-        val unfinished = active.filterNot { it.state.isTerminal }
-        if (unfinished.isNotEmpty()) {
-            log.error("[Job] Shutting down with {} unfinished job(s); they are lost: {}",
-                unfinished.size, unfinished.map { "${it.mode}:${it.user.id}:${it.state}" })
+        active.filter { !it.state.isTerminal && it.state != JobState.RUNNING }
+            .forEach { job -> finish(job, JobState.ABORTED, "서비스 종료로 중단(이전 상태 ${job.state})") { notifyShutdown(job) } }
+        val stillRunning = active.filter { it.state == JobState.RUNNING }
+        if (stillRunning.isNotEmpty()) {
+            log.error("[Job] Shutting down while {} attempt(s) still running: {}",
+                stillRunning.size, stillRunning.map { "${it.mode}:${it.user.id}" })
         }
         lifecycleRunning = false
     }
 
+    private fun notifyShutdown(job: UserJob) {
+        val detail = if (job.mode == TaskMode.PURCHASE) {
+            "구매 여부는 동행복권 구매내역에서 확인하고, 필요하면 다시 실행하세요(구매 전 확인이 있어 다시 실행해도 이중 구매되지 않습니다)."
+        } else {
+            "필요하면 결과 확인을 다시 실행하세요."
+        }
+        notifier.failure(job.user, job.mode, IllegalStateException("서비스 재시작/종료로 작업이 중단되었습니다. $detail"), null)
+    }
+
     override fun isRunning(): Boolean = lifecycleRunning
 
-    /** 웹 서버·실행기보다 먼저 멈춰 실행 중인 시도를 정리한다. */
+    /** 웹 서버가 멈춘 뒤, 실행기(lottoTaskExecutor)가 종료되기 전에 멈춰 실행 중인 시도를 정리한다. */
     override fun getPhase(): Int = Int.MAX_VALUE - 1_000
 
     private data class JobKey(val mode: TaskMode, val userId: String)
