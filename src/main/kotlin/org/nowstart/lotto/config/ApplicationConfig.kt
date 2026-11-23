@@ -8,7 +8,6 @@ import java.time.Clock
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import org.nowstart.lotto.adapter.outbound.browser.BrowserSettings
-import org.nowstart.lotto.application.service.ExecutionSettings
 import org.nowstart.lotto.application.service.LottoNotificationFactory
 import org.nowstart.lotto.domain.calendar.LottoDrawCalendar
 import org.springframework.boot.info.BuildProperties
@@ -29,12 +28,8 @@ class ApplicationConfig {
     fun lottoDrawCalendar(lottoClock: Clock) = LottoDrawCalendar(lottoClock)
 
     @Bean
-    fun executionSettings(properties: LottoProperties) = ExecutionSettings(properties.userTaskTimeoutMs.toLong())
-
-    @Bean
     fun browserSettings(properties: LottoProperties) = BrowserSettings(
         maxConcurrentSessions = properties.maxConcurrentSessions,
-        sessionPermitTimeoutMs = properties.userTaskTimeoutMs.toLong(),
         dryRun = properties.dryRun,
     )
 

@@ -9,8 +9,10 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verifyOrder
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.nowstart.lotto.application.port.outbound.LottoUser
+import org.nowstart.lotto.domain.exception.LoginRejectedException
 
 class PlaywrightLoginExecutorTest {
 
@@ -21,7 +23,8 @@ class PlaywrightLoginExecutorTest {
         val changeLater = mockk<Locator>(relaxed = true)
         val options = slot<Page.GetByRoleOptions>()
         every { page.getByPlaceholder(LottoBrowserConstants.ID_INPUT) } returns idInput
-        every { idInput.isVisible } returns true
+        // 제출 전에는 폼이 보이고, 로그인에 성공하면 사라진다
+        every { idInput.isVisible } returnsMany listOf(true, false)
         every { page.getByRole(AriaRole.BUTTON, capture(options)) } returns changeLater
         every { changeLater.isVisible } returns true
         every { page.locator(LottoBrowserConstants.USER_NAME).innerText() } returns "홍길동"
@@ -37,5 +40,16 @@ class PlaywrightLoginExecutorTest {
         assertThat(options.captured.name).isEqualTo(LottoBrowserConstants.CHANGE_LATER)
         assertThat(snapshot.name).isEqualTo("홍길동")
         assertThat(snapshot.deposit).isEqualTo("10,000원")
+    }
+
+    @Test
+    fun `제출 후에도 로그인 폼이 그대로면 로그인 거부로 본다 (사이트 장애와 구분)`() {
+        val page = mockk<Page>(relaxed = true)
+        val idInput = mockk<Locator>(relaxed = true)
+        every { page.getByPlaceholder(LottoBrowserConstants.ID_INPUT) } returns idInput
+        every { idInput.isVisible } returns true
+
+        assertThatThrownBy { PlaywrightLoginExecutor().login(page, LottoUser("user1", "wrong", 1, "user1@nowstart.org", false)) }
+            .isInstanceOf(LoginRejectedException::class.java)
     }
 }

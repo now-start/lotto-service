@@ -5,6 +5,7 @@ import org.nowstart.lotto.application.port.outbound.LoadLottoUsersPort
 import org.nowstart.lotto.application.port.outbound.LottoAutomationPort
 import org.nowstart.lotto.application.port.outbound.SendNotificationPort
 import org.slf4j.LoggerFactory
+import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Service
 
 private val log = LoggerFactory.getLogger(InitializeLottoInteractor::class.java)
@@ -18,6 +19,8 @@ class InitializeLottoInteractor(
     private val lottoNotificationFactory: LottoNotificationFactory,
 ) : InitializeLottoUseCase {
 
+    /** 기동을 막지 않도록 별도 스레드에서 돈다(사이트가 느리면 로그인에 수 분이 걸린다). */
+    @Async("lottoTaskExecutor")
     override fun initialize() {
         for (user in loadLottoUsersPort.loadUsers()) {
             if (!user.init) {

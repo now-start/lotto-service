@@ -45,10 +45,8 @@ lotto:
   # 로컬 실행은 실제 계정으로 사이트에 접속하므로 기본은 최종 확정 직전에 멈춘다(LOTTO_DRY_RUN=false로 해제).
   dry-run: ${LOTTO_DRY_RUN:true}
   max-concurrent-sessions: ${LOTTO_MAX_CONCURRENT_SESSIONS:1}
-  user-task-timeout-ms: ${LOTTO_USER_TASK_TIMEOUT_MS:180000}
   mail:
     from: ${LOTTO_MAIL_FROM:no-reply@localhost}
   cron:
     check: ${LOTTO_CRON_CHECK:0 0 22 * * 6}
     buy: ${LOTTO_CRON_BUY:0 0 9 * * 0}
-    zone: ${LOTTO_CRON_ZONE:Asia/Seoul}

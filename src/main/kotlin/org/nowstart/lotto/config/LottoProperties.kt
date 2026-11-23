@@ -18,21 +18,9 @@ class LottoProperties {
     @field:NotEmpty(message = "최소 1명 이상의 사용자 정보가 필요합니다")
     var users: MutableList<User> = mutableListOf()
 
-    @field:Min(value = 1, message = "재시도 횟수는 최소 1회여야 합니다")
-    @field:Max(value = 10, message = "재시도 횟수는 최대 10회까지 가능합니다")
-    var maxRetries: Int = 3
-
-    @field:Min(value = 1000, message = "재시도 지연 시간은 최소 1초여야 합니다")
-    @field:Max(value = 3_600_000, message = "재시도 지연 시간은 최대 1시간까지 가능합니다")
-    var retryDelayMs: Int = 2000
-
     @field:Min(value = 1, message = "동시 실행 세션 수는 최소 1이어야 합니다")
     @field:Max(value = 50, message = "동시 실행 세션 수는 최대 50까지 가능합니다")
     var maxConcurrentSessions: Int = 3
-
-    @field:Min(value = 1000, message = "사용자 작업 타임아웃은 최소 1초여야 합니다")
-    @field:Max(value = 1_800_000, message = "사용자 작업 타임아웃은 최대 30분까지 가능합니다")
-    var userTaskTimeoutMs: Int = 180_000
 
     /** true면 최종 결제 클릭 직전에 멈춘다(local 프로파일 기본 true). */
     var dryRun: Boolean = false
@@ -64,8 +52,5 @@ class LottoProperties {
 
         @field:NotBlank(message = "로또 구매 크론 표현식은 필수입니다")
         var buy: String = "0 0 9 * * 0"
-
-        @field:NotBlank(message = "스케줄러 타임존은 필수입니다")
-        var zone: String = "Asia/Seoul"
     }
 }

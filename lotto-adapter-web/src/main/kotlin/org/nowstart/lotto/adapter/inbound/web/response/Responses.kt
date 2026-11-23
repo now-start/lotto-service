@@ -1,36 +1,13 @@
 package org.nowstart.lotto.adapter.inbound.web.response
 
-import java.time.Instant
-import org.nowstart.lotto.application.port.inbound.LottoExecution
-import org.nowstart.lotto.domain.type.ExecutionStatus
-import org.nowstart.lotto.domain.type.TaskMode
-import org.nowstart.lotto.domain.type.TriggerType
+import org.nowstart.lotto.application.port.inbound.ExecutionView
+import org.nowstart.lotto.application.port.inbound.UserJobView
 
-data class LottoExecutionResponse(
-    val mode: TaskMode,
-    val trigger: TriggerType,
-    val status: ExecutionStatus,
-    val startedAt: Instant,
-    val endedAt: Instant,
-    val durationMs: Long,
-    val totalUsers: Int,
-    val successUsers: Int,
-    val failedUsers: Int,
-) {
-    companion object {
-        fun from(execution: LottoExecution) = LottoExecutionResponse(
-            execution.mode,
-            execution.trigger,
-            execution.status,
-            execution.startedAt,
-            execution.endedAt,
-            execution.durationMs,
-            execution.totalUsers,
-            execution.successUsers,
-            execution.failedUsers,
-        )
-    }
-}
+/** 202: 새 실행을 만들었다. alreadyActive는 이미 진행 중이라 새로 만들지 않은 계정 작업. */
+data class StartResponse(val execution: ExecutionView, val alreadyActive: List<UserJobView>)
+
+/** 409: 요청한 계정이 모두 이미 진행 중이다. 기존 실행 id로 상태를 조회하면 된다. */
+data class ConflictResponse(val message: String, val alreadyActive: List<UserJobView>)
 
 data class ManualExecutionErrorResponse(
     val message: String,

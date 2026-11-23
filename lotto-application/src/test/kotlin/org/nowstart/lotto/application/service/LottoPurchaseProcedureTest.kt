@@ -3,6 +3,7 @@ package org.nowstart.lotto.application.service
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import java.time.Duration
 import java.time.ZonedDateTime
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -24,7 +25,7 @@ class LottoPurchaseProcedureTest {
     private val clock = MutableClock(MONDAY_NOON.toInstant())
     private val user = LottoUser("user1", "password", 5, "user1@nowstart.org", false)
     private val account = LottoAccountSnapshot("홍길동", "60,000원")
-    private val registry = UncertainPurchaseRegistry(clock)
+    private val registry = UncertainPurchaseRegistry(clock, startupGrace = Duration.ZERO)
     private val procedure = LottoPurchaseProcedure(port, LottoDrawCalendar(clock), registry)
 
     @Test

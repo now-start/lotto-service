@@ -10,7 +10,6 @@ import org.nowstart.lotto.application.port.outbound.CheckResult
 import org.nowstart.lotto.application.port.outbound.LottoResult
 import org.nowstart.lotto.domain.exception.LedgerUnreadableException
 import org.slf4j.LoggerFactory
-import org.springframework.resilience.annotation.Retryable
 import org.springframework.stereotype.Component
 
 private val log = LoggerFactory.getLogger(PlaywrightResultExecutor::class.java)
@@ -18,11 +17,7 @@ private val log = LoggerFactory.getLogger(PlaywrightResultExecutor::class.java)
 @Component
 class PlaywrightResultExecutor {
 
-    @Retryable(
-        includes = [PlaywrightException::class],
-        maxRetriesString = "\${lotto.max-retries:3}",
-        delayString = "\${lotto.retry-delay-ms:2000}",
-    )
+    /** 결과 확인: 원장의 모든 행과 티켓 이미지. 재시도는 작업 단위(LottoJobService)에서 한다. */
     fun check(page: Page): List<CheckResult> {
         log.info("[Check] Start")
         navigateResultTable(page)

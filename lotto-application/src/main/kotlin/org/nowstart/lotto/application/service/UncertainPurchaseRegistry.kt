@@ -5,6 +5,7 @@ import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 private val log = LoggerFactory.getLogger(UncertainPurchaseRegistry::class.java)
@@ -15,9 +16,14 @@ private val log = LoggerFactory.getLogger(UncertainPurchaseRegistry::class.java)
  * 작업보다 오래 유지되는 프로세스 메모리 상태다(재시작 시 사라짐).
  */
 @Component
-class UncertainPurchaseRegistry(private val clock: Clock) {
+class UncertainPurchaseRegistry(private val clock: Clock, startupGrace: Duration) {
+
+    /** 재시작으로 기록이 사라졌을 수 있으므로, 기동 직후에도 원장 반영 지연 시간만큼은 구매를 미룬다. */
+    @Autowired
+    constructor(clock: Clock) : this(clock, LEDGER_LAG)
 
     private val lastPossibleClickAt = ConcurrentHashMap<Key, Instant>()
+    private val startupBlockedUntil: Instant = clock.instant().plus(startupGrace)
 
     fun record(userId: String, round: Int): Instant {
         val now = clock.instant()
@@ -29,6 +35,9 @@ class UncertainPurchaseRegistry(private val clock: Clock) {
 
     /** 아직 원장을 믿을 수 없으면 보류 해제 시각을, 아니면 null을 돌려준다. */
     fun blockedUntil(userId: String, round: Int): Instant? {
+        if (clock.instant().isBefore(startupBlockedUntil)) {
+            return startupBlockedUntil
+        }
         val key = Key(userId, round)
         val clickedAt = lastPossibleClickAt[key] ?: return null
         val until = clickedAt.plus(LEDGER_LAG)

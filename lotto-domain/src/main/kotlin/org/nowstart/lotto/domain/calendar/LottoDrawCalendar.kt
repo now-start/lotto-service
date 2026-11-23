@@ -57,6 +57,10 @@ class LottoDrawCalendar(private val clock: Clock) {
         return !(local.dayOfWeek == DRAW_DAY && !local.toLocalTime().isBefore(cutoff))
     }
 
+    /** 해당 회차를 자동 구매할 수 있는 마지막 시각(추첨일 마감 10분 전). */
+    fun purchaseDeadline(round: Int): ZonedDateTime =
+        drawDate(round).atTime(DRAW_DAY_SALES_CLOSE.minus(PURCHASE_CUTOFF_MARGIN)).atZone(ZONE)
+
     /** 지금 구매할 수 있으면 그대로, 아니면 다음 판매 시작 시각. */
     fun nextPurchasableAt(at: ZonedDateTime): ZonedDateTime {
         val local = at.toZone()

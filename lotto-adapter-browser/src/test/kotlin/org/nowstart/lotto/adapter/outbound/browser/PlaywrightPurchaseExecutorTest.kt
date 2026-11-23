@@ -17,12 +17,6 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.nowstart.lotto.application.port.outbound.LottoUser
 import org.nowstart.lotto.application.port.outbound.PurchaseSubmission.Status
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
-import org.springframework.resilience.annotation.EnableResilientMethods
-import org.springframework.test.context.TestPropertySource
-import org.springframework.test.context.junit.jupiter.SpringJUnitConfig
 
 class PlaywrightPurchaseExecutorTest {
 
@@ -79,24 +73,8 @@ class PlaywrightPurchaseExecutorTest {
         assertThat(executor().buy(page, user, 3) { false }.status).isEqualTo(Status.CLICKED)
     }
 
-    private fun executor(dryRun: Boolean = false) = PlaywrightPurchaseExecutor(BrowserSettings(1, 1_000, dryRun))
-
-    private fun dialog(message: String): Dialog = mockk(relaxed = true) {
-        every { message() } returns message
-        every { type() } returns "alert"
-    }
-}
-
-@SpringJUnitConfig(classes = [PlaywrightPurchaseExecutorRetryTest.Config::class])
-@TestPropertySource(properties = ["lotto.max-retries=3", "lotto.retry-delay-ms=1"])
-class PlaywrightPurchaseExecutorRetryTest {
-
-    @Autowired
-    private lateinit var executor: PlaywrightPurchaseExecutor
-
     @Test
-    fun `구매는 실패해도 재시도하지 않고 예외를 전파한다 (멱등하지 않은 실거래 보호)`() {
-        val page = mockk<Page>(relaxed = true)
+    fun `구매 화면 진행 중 실패하면 다시 시도하지 않고 예외를 그대로 전파한다`() {
         val autoNumber = mockk<Locator>()
         val attempts = AtomicInteger()
         every { page.locator(LottoBrowserConstants.AUTO_NUMBER) } returns autoNumber
@@ -105,17 +83,29 @@ class PlaywrightPurchaseExecutorRetryTest {
             throw IllegalStateException("temporary")
         }
 
-        assertThatThrownBy { executor.buy(page, LottoUser("user1", "password", 2, "user1@nowstart.org", false), 2) { false } }
-            .isInstanceOf(IllegalStateException::class.java)
+        assertThatThrownBy { executor().buy(page, user, 2) { false } }.isInstanceOf(IllegalStateException::class.java)
         assertThat(attempts.get()).isEqualTo(1)
         verify(exactly = 1) { page.navigate(LottoBrowserConstants.URL_PURCHASE) }
     }
 
-    @Configuration
-    @EnableResilientMethods
-    class Config {
+    @Test
+    fun `브라우저 실행기에는 스텝 단위 재시도 애너테이션이 없다 (재시도는 작업 단위로만)`() {
+        val retryable = listOf(
+            PlaywrightLoginExecutor::class.java,
+            PlaywrightPurchaseExecutor::class.java,
+            PlaywrightResultExecutor::class.java,
+            PlaywrightSessionManager::class.java,
+            LottoAutomationPlaywrightAdapter::class.java,
+        ).flatMap { type -> type.declaredMethods.toList() }
+            .filter { method -> method.annotations.any { it.annotationClass.qualifiedName == "org.springframework.resilience.annotation.Retryable" } }
 
-        @Bean
-        fun playwrightPurchaseExecutor() = PlaywrightPurchaseExecutor(BrowserSettings(1, 1_000, dryRun = false))
+        assertThat(retryable).isEmpty()
+    }
+
+    private fun executor(dryRun: Boolean = false) = PlaywrightPurchaseExecutor(BrowserSettings(1, dryRun))
+
+    private fun dialog(message: String): Dialog = mockk(relaxed = true) {
+        every { message() } returns message
+        every { type() } returns "alert"
     }
 }

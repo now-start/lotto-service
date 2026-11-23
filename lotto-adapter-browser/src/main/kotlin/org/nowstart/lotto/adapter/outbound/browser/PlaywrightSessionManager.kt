@@ -81,7 +81,7 @@ class PlaywrightSessionManager(
      * 확보하지 못하면 예외로 종료해, future가 반드시 완료되고 in-flight 키가 해제되도록 한다(영구 skip 방지).
      */
     private fun acquirePermit() {
-        val timeoutMs = settings.sessionPermitTimeoutMs
+        val timeoutMs = SESSION_PERMIT_TIMEOUT_MS
         try {
             check(sessionLimiter.tryAcquire(timeoutMs, TimeUnit.MILLISECONDS)) {
                 "브라우저 세션 허가를 ${timeoutMs}ms 내에 확보하지 못했습니다 (동시 세션 한도 초과/지연)"
@@ -154,6 +154,9 @@ class PlaywrightSessionManager(
         }
     }
 }
+
+/** 브라우저 슬롯을 기다리는 최대 시간. 넘기면 이번 시도는 실패하고 작업 단위로 다시 시도한다. */
+private const val SESSION_PERMIT_TIMEOUT_MS = 10L * 60 * 1000
 
 private fun closeQuietly(closeable: AutoCloseable?, failureMessage: String) {
     try {
