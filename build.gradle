@@ -1,11 +1,12 @@
 import org.springframework.boot.gradle.plugin.SpringBootPlugin
 
 plugins {
-    id 'org.springframework.boot' version '4.1.0'
-    id 'io.spring.dependency-management' version '1.1.7'
-    id 'com.gorylenko.gradle-git-properties' version '4.0.1'
-    id 'org.jetbrains.kotlin.jvm' version '2.3.21'
-    id 'org.jetbrains.kotlin.plugin.spring' version '2.3.21'
+    id 'base'
+    id 'org.springframework.boot' version '4.1.0' apply false
+    id 'io.spring.dependency-management' version '1.1.7' apply false
+    id 'com.gorylenko.gradle-git-properties' version '4.0.1' apply false
+    id 'org.jetbrains.kotlin.jvm' version '2.3.21' apply false
+    id 'org.jetbrains.kotlin.plugin.spring' version '2.3.21' apply false
 }
 
 ext {
@@ -19,7 +20,7 @@ ext {
 // 공유 CI(now-start/gitops)는 루트의 version과 JavaLanguageVersion.of(...)를 읽고, 루트에서 bootBuildImage를 실행한다.
 allprojects {
     group = 'org.nowstart'
-    version = '9.4.6'
+    version = '9.4.7'
 
     repositories {
         mavenCentral()
@@ -31,9 +32,7 @@ subprojects {
     apply plugin: 'org.jetbrains.kotlin.jvm'
     apply plugin: 'org.jetbrains.kotlin.plugin.spring'
     apply plugin: 'io.spring.dependency-management'
-}
 
-configure(allprojects) {
     java {
         toolchain {
             languageVersion = JavaLanguageVersion.of(25)
@@ -67,31 +66,10 @@ configure(allprojects) {
     }
 }
 
-springBoot {
-    buildInfo()
+tasks.named('assemble') {
+    dependsOn subprojects.collect { it.tasks.named('assemble') }
 }
 
-dependencies {
-    implementation project(':lotto-application')
-    implementation project(':lotto-adapter-web')
-    implementation project(':lotto-adapter-scheduler')
-    implementation project(':lotto-adapter-browser')
-    implementation project(':lotto-adapter-mail')
-    implementation 'io.opentelemetry.instrumentation:opentelemetry-spring-boot-starter'
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-api'
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.boot:spring-boot-starter-validation'
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.cloud:spring-cloud-starter-config'
-    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
-    implementation 'tools.jackson.module:jackson-module-kotlin'
-}
-
-bootRun {
-    systemProperty 'spring.profiles.active',
-            System.getProperty('spring.profiles.active', System.getenv('SPRING_PROFILES_ACTIVE') ?: 'local')
-}
-
-bootBuildImage {
-    runImage = "mcr.microsoft.com/playwright/java:v$playwrightVersion"
+tasks.named('check') {
+    dependsOn subprojects.collect { it.tasks.named('check') }
 }

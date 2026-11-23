@@ -1,8 +1,0 @@
-dependencies {
-    implementation project(':lotto-application')
-    implementation 'org.springframework.boot:spring-boot-starter-mail'
-    implementation 'io.micrometer:micrometer-core'
-    implementation 'org.slf4j:slf4j-api'
-    // 테스트에서 실제 SMTP 예외(SMTPSendFailedException)를 만들기 위해서만 필요하다(운영은 런타임 의존).
-    testImplementation 'org.eclipse.angus:angus-mail'
-}

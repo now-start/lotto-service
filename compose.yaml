@@ -1,11 +1,7 @@
 services:
   phantom2691:
     user: root
-    image: lotto-service:v4.0.3
+    image: ghcr.io/now-start/lotto-service:9.4.7
     environment:
-      - TZ=Asia/Seoul
-      - MAIL_USERNAME=
-      - MAIL_PASSWORD=
-      - LOTTO_ID=
-      - LOTTO_PASSWORD=
-      - LOTTO_EMAIL=
+      - TZ=UTC
+      - SPRING_CONFIG_IMPORT

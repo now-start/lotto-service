@@ -1,0 +1,43 @@
+plugins {
+    id 'org.springframework.boot'
+    id 'com.gorylenko.gradle-git-properties'
+}
+
+base {
+    archivesName = rootProject.name
+}
+
+springBoot {
+    buildInfo {
+        properties {
+            name = rootProject.name
+        }
+    }
+}
+
+dependencies {
+    implementation project(':application')
+    implementation project(':adapter-api')
+    implementation project(':adapter-scheduler')
+    implementation project(':adapter-browser')
+    implementation project(':adapter-mail')
+    implementation 'io.opentelemetry.instrumentation:opentelemetry-spring-boot-starter'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-api'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.cloud:spring-cloud-starter-config'
+    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+    implementation 'tools.jackson.module:jackson-module-kotlin'
+}
+
+bootRun {
+    workingDir = rootProject.projectDir
+    systemProperty 'spring.profiles.active',
+            System.getProperty('spring.profiles.active', System.getenv('SPRING_PROFILES_ACTIVE') ?: 'local')
+}
+
+bootBuildImage {
+    imageName = "${rootProject.name}:${project.version}"
+    runImage = "mcr.microsoft.com/playwright/java:v$playwrightVersion"
+}

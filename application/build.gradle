@@ -1,0 +1,6 @@
+dependencies {
+    // 포트가 도메인 타입을 노출하므로 api로 전달한다.
+    api project(':domain')
+    implementation 'org.springframework:spring-context'
+    implementation 'org.slf4j:slf4j-api'
+}
