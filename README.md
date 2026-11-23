@@ -36,6 +36,8 @@ Config Server에 접근할 수 있는 환경에서 `docker compose up -d`로 실
 
 ## API
 
+운영에서는 플랫폼 계정으로 로그인한 뒤 Swagger UI에서 `lotto`를 선택합니다. [Swagger UI](https://spring.nowstart.org/admin/swagger-ui/index.html) · [OpenAPI JSON](https://spring.nowstart.org/lotto/v3/api-docs)
+
 수동 실행 API:
 
 - `POST /api/lotto/check` : 결과 확인 작업 시작

@@ -20,7 +20,7 @@ ext {
 // 공유 CI(now-start/gitops)는 루트의 version과 JavaLanguageVersion.of(...)를 읽고, 루트에서 bootBuildImage를 실행한다.
 allprojects {
     group = 'org.nowstart'
-    version = '9.4.7'
+    version = '9.4.8'
 
     repositories {
         mavenCentral()
@@ -48,7 +48,6 @@ subprojects {
     dependencyManagement {
         imports {
             mavenBom SpringBootPlugin.BOM_COORDINATES
-            mavenBom "io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom:$opentelemetryVersion"
             mavenBom "org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion"
             mavenBom "org.springdoc:springdoc-openapi-bom:$springDocVersion"
         }

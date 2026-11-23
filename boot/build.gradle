@@ -3,6 +3,13 @@ plugins {
     id 'com.gorylenko.gradle-git-properties'
 }
 
+dependencyManagement {
+    imports {
+        // Boot 플러그인이 등록한 BOM 뒤에서 계측 라이브러리와 SDK 버전을 함께 맞춘다.
+        mavenBom "io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom:$opentelemetryVersion"
+    }
+}
+
 base {
     archivesName = rootProject.name
 }
