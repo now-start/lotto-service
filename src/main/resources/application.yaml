@@ -1,6 +1,14 @@
 spring:
   application:
     name: lotto
+  mail:
+    properties:
+      mail:
+        smtp:
+          # JavaMail 기본 타임아웃은 무한대라 메일 서버 장애 시 작업 스레드가 묶인다.
+          connectiontimeout: 10000
+          timeout: 30000
+          writetimeout: 60000
 
 ---
 

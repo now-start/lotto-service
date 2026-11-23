@@ -48,7 +48,6 @@ public class PlaywrightSessionManager {
         Playwright playwright = null;
         Browser browser = null;
         BrowserContext context = null;
-        boolean traceStarted = false;
         try {
             playwright = Playwright.create();
             browser = playwright.chromium().launch(browserLaunchOptions.get());
@@ -56,8 +55,7 @@ public class PlaywrightSessionManager {
                     .setUserAgent(LottoBrowserConstants.USER_AGENT_CHROME)
                     .setIsMobile(false));
             context.addInitScript(LottoBrowserConstants.SCRIPT_CHROME_PLATFORM);
-            playWrightTraceArchive.start(context);
-            traceStarted = true;
+            // 트레이스는 로그인 이후 startTracing()에서 시작한다(비밀번호 입력값이 트레이스에 남지 않도록).
             return new PlaywrightLottoSession(
                     context.newPage(),
                     context,
@@ -65,15 +63,34 @@ public class PlaywrightSessionManager {
                     playwright,
                     playWrightTraceArchive,
                     new AtomicBoolean(false),
+                    new AtomicBoolean(false),
                     new AtomicReference<>(),
                     releasePermit
             );
         } catch (RuntimeException exception) {
-            cleanupFailedOpen(context, browser, playwright, releasePermit, traceStarted);
+            cleanupFailedOpen(context, browser, playwright, releasePermit);
             throw exception;
         } catch (Error error) {
-            cleanupFailedOpen(context, browser, playwright, releasePermit, traceStarted);
+            cleanupFailedOpen(context, browser, playwright, releasePermit);
             throw error;
+        }
+    }
+
+    /**
+     * 로그인 이후에 트레이스를 시작한다. 트레이스는 진단용이므로 시작에 실패해도 작업은 계속한다.
+     */
+    public void startTracing(LottoAutomationSession session) {
+        if (!(session instanceof PlaywrightLottoSession playwrightLottoSession)) {
+            return;
+        }
+        if (!playwrightLottoSession.traceStarted().compareAndSet(false, true)) {
+            return;
+        }
+        try {
+            playWrightTraceArchive.start(playwrightLottoSession.context());
+        } catch (RuntimeException exception) {
+            playwrightLottoSession.traceStarted().set(false);
+            log.warn("트레이스 시작 실패 - 트레이스 없이 계속 진행", exception);
         }
     }
 
@@ -105,12 +122,8 @@ public class PlaywrightSessionManager {
             BrowserContext context,
             Browser browser,
             Playwright playwright,
-            Runnable releasePermit,
-            boolean traceStarted
+            Runnable releasePermit
     ) {
-        if (traceStarted && context != null) {
-            playWrightTraceArchive.stop(context, true);
-        }
         closeQuietly(context, "브라우저 컨텍스트 종료 실패");
         closeQuietly(browser, "브라우저 종료 실패");
         closeQuietly(playwright, "Playwright 종료 실패");
@@ -124,6 +137,7 @@ public class PlaywrightSessionManager {
             Playwright playwright,
             PlaywrightTraceArchive playWrightTraceArchive,
             AtomicBoolean failed,
+            AtomicBoolean traceStarted,
             AtomicReference<Attachment> trace,
             Runnable releasePermit
     ) implements LottoAutomationSession {
@@ -141,7 +155,7 @@ public class PlaywrightSessionManager {
         @Override
         public void close() {
             try {
-                trace.set(playWrightTraceArchive.stop(context, failed.get()));
+                trace.set(captureFailureArtifact());
             } finally {
                 try {
                     closePage();
@@ -151,6 +165,23 @@ public class PlaywrightSessionManager {
                 } finally {
                     releasePermit.run();
                 }
+            }
+        }
+
+        /** 실패한 세션의 진단 자료: 로그인 후면 트레이스, 로그인 전이면 화면 캡처(트레이스는 시작 전). */
+        private Attachment captureFailureArtifact() {
+            if (traceStarted.get()) {
+                return playWrightTraceArchive.stop(context, failed.get());
+            }
+            if (!failed.get() || page == null || page.isClosed()) {
+                return null;
+            }
+            try {
+                byte[] png = page.screenshot(new Page.ScreenshotOptions().setFullPage(true));
+                return new Attachment("lotto-failure-" + System.currentTimeMillis() + ".png", png, Attachment.PNG);
+            } catch (RuntimeException exception) {
+                PlaywrightSessionManager.log.warn("실패 화면 캡처 실패", exception);
+                return null;
             }
         }
 

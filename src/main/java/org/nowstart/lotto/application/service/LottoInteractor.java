@@ -92,10 +92,12 @@ public class LottoInteractor implements LottoUseCase {
         List<UserTask> userTasks = new ArrayList<>();
         int skippedUsers = 0;
         for (LottoUser user : targetUsers) {
-            String key = mode + ":" + user.id();
+            // 계정 단위 키: 같은 계정은 확인(CHECK)과 구매(PURCHASE)도 동시에 실행하지 않는다
+            // (두 번째 로그인이 구매 세션을 끊어 확정 클릭 직후 상태를 잃는 것을 방지).
+            String key = user.id();
             if (!inFlightKeys.add(key)) {
                 skippedUsers++;
-                log.warn("[Task][{}] Skip - 동일 사용자 작업이 이미 실행 중 mode={}", user.id(), mode);
+                log.warn("[Task][{}] Skip - 같은 계정 작업이 이미 실행 중 mode={}", user.id(), mode);
                 continue;
             }
             // per-user 타임아웃 기준점을 '제출 시점'으로 고정한다 — join 시점 기준이면 앞선 hung 사용자를

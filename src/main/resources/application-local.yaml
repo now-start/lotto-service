@@ -42,6 +42,8 @@ lotto:
       email: ${LOTTO_EMAIL}
       count: ${LOTTO_COUNT:5}
       init: ${LOTTO_INIT:false}
+  # 로컬 실행은 실제 계정으로 사이트에 접속하므로 기본은 최종 확정 직전에 멈춘다(LOTTO_DRY_RUN=false로 해제).
+  dry-run: ${LOTTO_DRY_RUN:true}
   max-concurrent-sessions: ${LOTTO_MAX_CONCURRENT_SESSIONS:1}
   user-task-timeout-ms: ${LOTTO_USER_TASK_TIMEOUT_MS:180000}
   mail:

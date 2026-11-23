@@ -2,9 +2,12 @@ package org.nowstart.lotto.application.service;
 
 import static org.assertj.core.api.BDDAssertions.then;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
+import java.util.function.Predicate;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.CountDownLatch;
@@ -16,11 +19,13 @@ import org.nowstart.lotto.application.port.out.LottoAutomationPort;
 import org.nowstart.lotto.application.port.out.LottoAutomationPort.CheckResult;
 import org.nowstart.lotto.application.port.out.LottoAutomationPort.LottoAccountSnapshot;
 import org.nowstart.lotto.application.port.out.LottoAutomationPort.LottoResult;
-import org.nowstart.lotto.application.port.out.LottoAutomationPort.PurchaseReceipt;
+import org.nowstart.lotto.application.port.out.LottoAutomationPort.PurchaseSubmission;
 import org.nowstart.lotto.application.port.out.LottoAutomationSession;
 import org.nowstart.lotto.application.port.out.LoadLottoUsersPort.LottoUser;
 import org.nowstart.lotto.application.port.out.SendNotificationPort;
+import org.nowstart.lotto.application.port.out.SendNotificationPort.Delivery;
 import org.nowstart.lotto.config.AsyncConfig;
+import org.nowstart.lotto.domain.calendar.LottoDrawCalendar;
 import org.nowstart.lotto.domain.type.TaskMode;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,6 +36,8 @@ import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
         AsyncConfig.class,
         LottoUserAsyncRunner.class,
         LottoNotificationFactory.class,
+        LottoPurchaseProcedure.class,
+        UncertainPurchaseRegistry.class,
         LottoUserAsyncRunnerSpringTest.Config.class
 })
 @DisplayName("Spring Async 사용자별 로또 작업 실행")
@@ -76,8 +83,17 @@ class LottoUserAsyncRunnerSpringTest {
 
         @Bean
         SendNotificationPort sendNotificationPort() {
-            return message -> {
-            };
+            return message -> Delivery.SENT;
+        }
+
+        @Bean
+        Clock clock() {
+            return Clock.system(LottoDrawCalendar.ZONE);
+        }
+
+        @Bean
+        LottoDrawCalendar lottoDrawCalendar(Clock clock) {
+            return new LottoDrawCalendar(clock);
         }
     }
 
@@ -109,7 +125,29 @@ class LottoUserAsyncRunnerSpringTest {
         }
 
         @Override
-        public Optional<PurchaseReceipt> buy(LottoAutomationSession session, LottoUser user, BooleanSupplier abortRequested) {
+        public LottoAccountSnapshot readAccount(LottoAutomationSession session) {
+            throw new UnsupportedOperationException("not used in this test");
+        }
+
+        @Override
+        public List<LottoResult> readLedger(LottoAutomationSession session) {
+            throw new UnsupportedOperationException("not used in this test");
+        }
+
+        @Override
+        public Optional<List<LottoResult>> awaitLedger(LottoAutomationSession session,
+                Predicate<List<LottoResult>> condition, Duration timeout, BooleanSupplier abortRequested) {
+            throw new UnsupportedOperationException("not used in this test");
+        }
+
+        @Override
+        public List<CheckResult> captureTickets(LottoAutomationSession session, List<LottoResult> rows) {
+            throw new UnsupportedOperationException("not used in this test");
+        }
+
+        @Override
+        public PurchaseSubmission buy(LottoAutomationSession session, LottoUser user, int count,
+                BooleanSupplier abortRequested) {
             throw new UnsupportedOperationException("purchase is not used in this test");
         }
 
@@ -119,11 +157,6 @@ class LottoUserAsyncRunnerSpringTest {
                     new LottoResult("2026-01-01", "1000", "로또", "1,2,3,4,5,6", "1", "당첨", "5000"),
                     new byte[] {1}
             ));
-        }
-
-        @Override
-        public CheckResult check(LottoAutomationSession session, PurchaseReceipt purchaseReceipt) {
-            throw new UnsupportedOperationException("purchase check is not used in this test");
         }
 
         boolean awaitLoginStarted() throws InterruptedException {

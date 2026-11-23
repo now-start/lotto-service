@@ -43,6 +43,27 @@ class LottoInteractorTest {
     }
 
     @Test
+    @DisplayName("같은 계정의 확인 작업이 아직 끝나지 않았으면 구매를 시작하지 않는다 (계정 단위 중복 방지)")
+    void shouldSkipPurchaseWhileSameAccountCheckIsRunning() {
+        LottoProperties properties = new LottoProperties();
+        properties.setUserTaskTimeoutMs(1000);
+        LottoInteractor interactor = new LottoInteractor(loadLottoUsersPort, lottoUserRunner, properties);
+        LottoUser user = createUser("user1");
+        CompletableFuture<Boolean> runningCheck = new CompletableFuture<>();
+        given(loadLottoUsersPort.loadUsers()).willReturn(List.of(user));
+        given(lottoUserRunner.runAsync(eq(user), eq(TaskMode.CHECK), any())).willReturn(runningCheck);
+
+        // 확인 작업은 호출자 타임아웃(1초)으로 먼저 반환되지만 실제 작업은 아직 진행 중이다
+        LottoExecution check = interactor.check(TargetCommand.all(TriggerType.MANUAL));
+        LottoExecution purchase = interactor.purchase(TargetCommand.all(TriggerType.MANUAL));
+
+        then(check.status()).isEqualTo(ExecutionStatus.FAILURE);
+        then(purchase.status()).isEqualTo(ExecutionStatus.FAILURE);
+        BDDMockito.then(lottoUserRunner).should(org.mockito.Mockito.never()).runAsync(any(), eq(TaskMode.PURCHASE), any());
+        runningCheck.complete(true);
+    }
+
+    @Test
     @DisplayName("일반 확인이면 모든 사용자를 비동기 실행하고 성공 결과를 집계한다")
     void shouldCheckUsersAsynchronouslyAndAggregateSuccess() {
         // 준비: 두 사용자 작업이 모두 성공한다

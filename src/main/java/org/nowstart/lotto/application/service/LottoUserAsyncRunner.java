@@ -10,9 +10,9 @@ import org.nowstart.lotto.application.port.out.LoadLottoUsersPort.LottoUser;
 import org.nowstart.lotto.application.port.out.LottoAutomationPort;
 import org.nowstart.lotto.application.port.out.LottoAutomationPort.CheckResult;
 import org.nowstart.lotto.application.port.out.LottoAutomationPort.LottoAccountSnapshot;
-import org.nowstart.lotto.application.port.out.LottoAutomationPort.PurchaseReceipt;
 import org.nowstart.lotto.application.port.out.LottoAutomationSession;
 import org.nowstart.lotto.application.port.out.SendNotificationPort;
+import org.nowstart.lotto.application.port.out.SendNotificationPort.Delivery;
 import org.nowstart.lotto.application.port.out.SendNotificationPort.NotificationMessage;
 import org.nowstart.lotto.domain.exception.LottoAutomationException;
 import org.nowstart.lotto.domain.type.StepType;
@@ -28,6 +28,7 @@ public class LottoUserAsyncRunner implements LottoUserRunner {
     private final LottoAutomationPort lottoAutomationPort;
     private final SendNotificationPort sendNotificationPort;
     private final LottoNotificationFactory lottoNotificationFactory;
+    private final LottoPurchaseProcedure lottoPurchaseProcedure;
 
     @Async("lottoTaskExecutor")
     @Override
@@ -40,11 +41,19 @@ public class LottoUserAsyncRunner implements LottoUserRunner {
             // 세션을 열기 전이라 브라우저 permit을 잡지 않은 상태 → 바로 통지해도 무방.
             return aborted(user, mode, "작업 시작 전");
         }
+        if (mode == TaskMode.PURCHASE) {
+            // 판매 시간 밖이거나 직전 구매 판정 대기 중이면 브라우저를 열지 않는다.
+            Optional<PurchaseOutcome> early = lottoPurchaseProcedure.precheck(user);
+            if (early.isPresent()) {
+                return report(user, null, early.get(), null);
+            }
+        }
 
         // 브라우저 작업은 try-with-resources 안에서만 수행하고, 통지(SMTP)는 세션이 닫혀 permit이 해제된 뒤에 보낸다.
         // (성공/실패/중단 통지가 브라우저 슬롯을 붙잡아 다른 사용자가 세마포어에서 대기하는 것을 방지)
         LottoAccountSnapshot accountSnapshot = null;
         List<CheckResult> results = null;
+        PurchaseOutcome purchaseOutcome = null;
         String abortPhase = null;
         boolean checkAbortedAfterCompletion = false;
         LottoAutomationSession openedSession = null;
@@ -55,17 +64,14 @@ public class LottoUserAsyncRunner implements LottoUserRunner {
                     abortPhase = "세션 확보 직후";
                 } else {
                     log.info("[Task][{}] Start mode={}", user.id(), mode);
-                    accountSnapshot = runStep(StepType.LOGIN, user, () -> lottoAutomationPort.login(session, user));
+                    LottoAccountSnapshot account = runStep(StepType.LOGIN, user, () -> lottoAutomationPort.login(session, user));
+                    accountSnapshot = account;
 
                     if (mode == TaskMode.PURCHASE) {
-                        Optional<PurchaseReceipt> purchaseReceipt = runStep(StepType.PURCHASE, user,
-                                () -> lottoAutomationPort.buy(session, user, abortSignal::get));
-                        if (purchaseReceipt.isEmpty()) {
+                        purchaseOutcome = runStep(StepType.PURCHASE, user,
+                                () -> lottoPurchaseProcedure.purchase(session, user, account, abortSignal::get));
+                        if (purchaseOutcome.needsDiagnostics() || purchaseOutcome instanceof PurchaseOutcome.Aborted) {
                             session.markFailed();
-                            abortPhase = "최종 확정 미제출/중단";
-                        } else {
-                            results = List.of(runStep(StepType.CHECK, user,
-                                    () -> lottoAutomationPort.check(session, purchaseReceipt.get())));
                         }
                     } else {
                         results = runStep(StepType.CHECK, user, () -> lottoAutomationPort.check(session));
@@ -95,7 +101,10 @@ public class LottoUserAsyncRunner implements LottoUserRunner {
         if (abortPhase != null) {
             return aborted(user, mode, abortPhase, openedSession);
         }
-        if (checkAbortedAfterCompletion || mode == TaskMode.CHECK && abortSignal.get()) {
+        if (mode == TaskMode.PURCHASE) {
+            return report(user, accountSnapshot, purchaseOutcome, openedSession);
+        }
+        if (checkAbortedAfterCompletion || abortSignal.get()) {
             // CHECK 진행 중 호출자 타임아웃 → 호출자는 이미 실패 보고. 뒤늦은 성공 통지로 상태 불일치를 만들지 않는다.
             log.warn("[Task][{}] Check completed but aborted meanwhile - suppressing success notification", user.id());
             return false;
@@ -108,11 +117,31 @@ public class LottoUserAsyncRunner implements LottoUserRunner {
             return true;
         } catch (Exception exception) {
             // 성공 메시지 포맷팅(스크랩 데이터 파싱 등) 중 오류가 나도 사용자에게 실패 통지를 보낸다.
-            // (브라우저 작업은 끝났고 세션이 닫혀 permit이 해제된 상태라 통지가 브라우저 슬롯을 점유하지 않는다)
             log.error("[Task][{}] Failed mode={} step=notify", user.id(), mode, exception);
             sendNotification(user, lottoNotificationFactory.createFailureMessage(user, mode, exception), "failure");
             return false;
         }
+    }
+
+    /** 구매 결과를 통지하고 성공 여부를 돌려준다. 통지 실패는 구매 결과를 바꾸지 않는다. */
+    private boolean report(
+            LottoUser user,
+            LottoAccountSnapshot accountSnapshot,
+            PurchaseOutcome outcome,
+            LottoAutomationSession session
+    ) {
+        if (outcome instanceof PurchaseOutcome.Aborted aborted) {
+            return aborted(user, TaskMode.PURCHASE, aborted.phase(), session);
+        }
+        log.info("[Task][{}] Purchase outcome={}", user.id(), outcome.getClass().getSimpleName());
+        try {
+            lottoNotificationFactory.createPurchaseOutcomeMessage(user, accountSnapshot, outcome)
+                    .map(message -> outcome.needsDiagnostics() ? withTrace(message, session) : message)
+                    .ifPresent(message -> sendNotification(user, message, outcome.getClass().getSimpleName()));
+        } catch (RuntimeException exception) {
+            log.error("[Task][{}] Purchase notification build failed outcome={}", user.id(), outcome, exception);
+        }
+        return outcome.isSuccess();
     }
 
     /**
@@ -142,8 +171,12 @@ public class LottoUserAsyncRunner implements LottoUserRunner {
 
     private void sendNotification(LottoUser user, NotificationMessage message, String kind) {
         try {
-            sendNotificationPort.send(message);
-            log.info("[Notify][{}] {} notification sent", user.id(), kind);
+            Delivery delivery = sendNotificationPort.send(message);
+            if (delivery == Delivery.QUEUED) {
+                log.warn("[Notify][{}] {} notification queued for resend", user.id(), kind);
+            } else {
+                log.info("[Notify][{}] {} notification sent", user.id(), kind);
+            }
         } catch (Exception notificationError) {
             log.error("[Notify][{}] {} notification failed", user.id(), kind, notificationError);
         }

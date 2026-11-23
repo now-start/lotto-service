@@ -48,7 +48,7 @@ class PlaywrightPurchaseExecutorRetryTest {
         }).given(autoNumber).click();
 
         // 실행 및 검증: 예외가 그대로 전파되고 단 한 번만 시도한다 (재시도 없음)
-        thenThrownBy(() -> playwrightPurchaseExecutor.buy(page, user, () -> false))
+        thenThrownBy(() -> playwrightPurchaseExecutor.buy(page, user, user.count(), () -> false))
                 .isInstanceOf(IllegalStateException.class);
         then(attempts.get()).isEqualTo(1);
         BDDMockito.then(page).should(times(1)).navigate(LottoBrowserConstants.URL_PURCHASE);
@@ -60,7 +60,7 @@ class PlaywrightPurchaseExecutorRetryTest {
 
         @Bean
         PlaywrightPurchaseExecutor playwrightPurchaseExecutor() {
-            return new PlaywrightPurchaseExecutor();
+            return new PlaywrightPurchaseExecutor(false);
         }
     }
 }

@@ -32,16 +32,6 @@ public class LottoProperties {
     @NotNull(message = "재시도 지연 시간은 필수입니다")
     private Integer retryDelayMs = 2000;
 
-    @Min(value = 1000, message = "구매 결과 대기 시간은 최소 1초여야 합니다")
-    @Max(value = 300000, message = "구매 결과 대기 시간은 최대 5분까지 가능합니다")
-    @NotNull(message = "구매 결과 대기 시간은 필수입니다")
-    private Integer purchaseResultTimeoutMs = 30000;
-
-    @Min(value = 100, message = "구매 결과 폴링 간격은 최소 0.1초여야 합니다")
-    @Max(value = 10000, message = "구매 결과 폴링 간격은 최대 10초까지 가능합니다")
-    @NotNull(message = "구매 결과 폴링 간격은 필수입니다")
-    private Integer purchaseResultPollIntervalMs = 1000;
-
     @Min(value = 1, message = "동시 실행 세션 수는 최소 1이어야 합니다")
     @Max(value = 50, message = "동시 실행 세션 수는 최대 50까지 가능합니다")
     @NotNull(message = "동시 실행 세션 수는 필수입니다")

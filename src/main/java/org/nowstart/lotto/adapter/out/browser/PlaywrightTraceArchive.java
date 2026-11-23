@@ -23,6 +23,8 @@ public class PlaywrightTraceArchive {
 
     private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
     private static final String TRACE_GLOB = "lotto-trace-*.zip";
+    /** 이보다 큰 트레이스는 메모리로 읽지 않는다(메일 첨부 상한은 메일 어댑터가 따로 적용). */
+    private static final long MAX_TRACE_READ_BYTES = 20L * 1024 * 1024;
     private final Object cleanupMonitor = new Object();
 
     @Value("${logging.file.path:./logs}")
@@ -41,11 +43,15 @@ public class PlaywrightTraceArchive {
         }
     }
 
+    /**
+     * DOM 스냅샷만 기록한다. 스크린캐스트(screenshots)와 소스(sources)는 용량만 키워 메일 첨부가 거부됐다(552).
+     * 호출자는 로그인 이후에 시작해야 한다 — 그 전에 시작하면 비밀번호 입력값이 트레이스에 평문으로 남는다.
+     */
     public void start(BrowserContext context) {
         context.tracing().start(new Tracing.StartOptions()
-                .setScreenshots(true)
+                .setScreenshots(false)
                 .setSnapshots(true)
-                .setSources(true));
+                .setSources(false));
     }
 
     public Attachment stop(BrowserContext context, boolean saveTrace) {
@@ -59,7 +65,13 @@ public class PlaywrightTraceArchive {
                 String traceId = UUID.randomUUID().toString().substring(0, 8);
                 Path tracePath = Paths.get(logPath, "lotto-trace-" + timestamp + "-" + traceId + ".zip");
                 context.tracing().stop(new Tracing.StopOptions().setPath(tracePath));
-                Attachment attachment = new Attachment(tracePath.getFileName().toString(), Files.readAllBytes(tracePath));
+                long traceBytes = Files.size(tracePath);
+                if (traceBytes > MAX_TRACE_READ_BYTES) {
+                    log.warn("[Trace] {} is {} bytes - not attached, kept on server", tracePath, traceBytes);
+                    return null;
+                }
+                Attachment attachment = new Attachment(tracePath.getFileName().toString(), Files.readAllBytes(tracePath),
+                        Attachment.ZIP);
                 try {
                     cleanupOldTraceFiles();
                 } catch (IOException exception) {

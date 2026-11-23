@@ -44,15 +44,19 @@ public class PlaywrightLoginExecutor {
             page.waitForLoadState(LoadState.NETWORKIDLE);
         }
 
-        page.navigate(LottoBrowserConstants.URL_MY_PAGE);
-
-        LottoAccountSnapshot snapshot = new LottoAccountSnapshot(
-                page.locator(LottoBrowserConstants.USER_NAME).innerText(),
-                page.locator(LottoBrowserConstants.USER_DEPOSIT).innerText()
-        );
+        LottoAccountSnapshot snapshot = readAccount(page);
 
         log.info("[Login][{}] Success deposit={}", user.id(), snapshot.deposit());
         return snapshot;
+    }
+
+    /** 마이페이지에서 이름과 예치금을 읽는다. 구매 후 예치금 차감 확인에도 쓴다. */
+    public LottoAccountSnapshot readAccount(Page page) {
+        page.navigate(LottoBrowserConstants.URL_MY_PAGE);
+        return new LottoAccountSnapshot(
+                page.locator(LottoBrowserConstants.USER_NAME).innerText(),
+                page.locator(LottoBrowserConstants.USER_DEPOSIT).innerText()
+        );
     }
 
     private void waitForLoginFormOrSkip(Locator idInput) {

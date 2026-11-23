@@ -3,12 +3,14 @@ package org.nowstart.lotto.adapter.out.browser;
 import static org.assertj.core.api.BDDAssertions.then;
 
 import com.microsoft.playwright.Page;
-import java.util.function.BooleanSupplier;
 import com.microsoft.playwright.PlaywrightException;
 import java.lang.reflect.Method;
+import java.time.Duration;
+import java.util.List;
+import java.util.function.BooleanSupplier;
+import java.util.function.Predicate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.nowstart.lotto.application.port.out.LottoAutomationPort.PurchaseReceipt;
 import org.nowstart.lotto.application.port.out.LoadLottoUsersPort.LottoUser;
 import org.springframework.resilience.annotation.Retryable;
 
@@ -16,22 +18,25 @@ import org.springframework.resilience.annotation.Retryable;
 class PlaywrightRetryAnnotationTest {
 
     @Test
-    @DisplayName("브라우저 조회 executor는 일시 오류(PlaywrightException)에 한해 재시도를 선언한다")
+    @DisplayName("조회성 executor(로그인, 결과 확인)는 일시 오류(PlaywrightException)에 한해 재시도를 선언한다")
     void shouldDeclareRetryOnTransientBrowserExecutors() throws NoSuchMethodException {
-        // 준비 및 실행/검증: 조회성(멱등) executor는 동일한 재시도 정책을 가진다
         assertRetryable(PlaywrightLoginExecutor.class.getMethod("login", Page.class, LottoUser.class));
         assertRetryable(PlaywrightResultExecutor.class.getMethod("check", Page.class));
-        assertRetryable(PlaywrightResultExecutor.class.getMethod("check", Page.class, PurchaseReceipt.class));
     }
 
     @Test
-    @DisplayName("구매(buy)는 멱등하지 않으므로 재시도를 선언하지 않는다")
-    void shouldNotDeclareRetryOnPurchase() throws NoSuchMethodException {
-        // 준비: 구매 메서드를 조회한다
-        Method buy = PlaywrightPurchaseExecutor.class.getMethod("buy", Page.class, LottoUser.class, BooleanSupplier.class);
-
-        // 실행 및 검증: 중복 구매 방지를 위해 Retryable을 선언하지 않는다
-        then(buy.getAnnotation(Retryable.class)).isNull();
+    @DisplayName("구매와 구매 판정용 원장 읽기는 재시도를 선언하지 않는다 (재시도가 브라우저를 오래 붙잡지 않도록)")
+    void shouldNotDeclareRetryOnPurchaseAndVerification() throws NoSuchMethodException {
+        then(PlaywrightPurchaseExecutor.class
+                .getMethod("buy", Page.class, LottoUser.class, int.class, BooleanSupplier.class)
+                .getAnnotation(Retryable.class)).isNull();
+        then(PlaywrightResultExecutor.class.getMethod("readLedger", Page.class)
+                .getAnnotation(Retryable.class)).isNull();
+        then(PlaywrightResultExecutor.class
+                .getMethod("awaitLedger", Page.class, Predicate.class, Duration.class, BooleanSupplier.class)
+                .getAnnotation(Retryable.class)).isNull();
+        then(PlaywrightResultExecutor.class.getMethod("captureTickets", Page.class, List.class)
+                .getAnnotation(Retryable.class)).isNull();
     }
 
     private void assertRetryable(Method method) {
