@@ -1,27 +1,3 @@
-plugins {
-    id 'org.springframework.boot'
-    id 'com.gorylenko.gradle-git-properties'
-}
-
-dependencyManagement {
-    imports {
-        // Boot 플러그인이 등록한 BOM 뒤에서 계측 라이브러리와 SDK 버전을 함께 맞춘다.
-        mavenBom "io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom:$opentelemetryVersion"
-    }
-}
-
-base {
-    archivesName = rootProject.name
-}
-
-springBoot {
-    buildInfo {
-        properties {
-            name = rootProject.name
-        }
-    }
-}
-
 dependencies {
     implementation project(':application')
     implementation project(':adapter-api')
@@ -36,15 +12,4 @@ dependencies {
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
     implementation 'tools.jackson.module:jackson-module-kotlin'
-}
-
-bootRun {
-    workingDir = rootProject.projectDir
-    systemProperty 'spring.profiles.active',
-            System.getProperty('spring.profiles.active', System.getenv('SPRING_PROFILES_ACTIVE') ?: 'local')
-}
-
-bootBuildImage {
-    imageName = "${rootProject.name}:${project.version}"
-    runImage = "mcr.microsoft.com/playwright/java:v$playwrightVersion"
 }

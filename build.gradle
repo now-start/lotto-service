@@ -11,7 +11,7 @@ plugins {
 
 ext {
     playwrightVersion = "1.62.0"
-    opentelemetryVersion = "2.30.0"
+    otelInstrumentationVersion = "2.30.0"
     springCloudVersion = "2025.1.2"
     springDocVersion = "3.1.0"
     mockkVersion = "1.14.12"
@@ -33,6 +33,12 @@ subprojects {
     apply plugin: 'org.jetbrains.kotlin.plugin.spring'
     apply plugin: 'io.spring.dependency-management'
 
+    // Boot 플러그인이 기본 BOM을 등록한 뒤 공통 버전을 적용한다.
+    if (path == ':boot') {
+        apply plugin: 'org.springframework.boot'
+        apply plugin: 'com.gorylenko.gradle-git-properties'
+    }
+
     java {
         toolchain {
             languageVersion = JavaLanguageVersion.of(25)
@@ -50,6 +56,7 @@ subprojects {
             mavenBom SpringBootPlugin.BOM_COORDINATES
             mavenBom "org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion"
             mavenBom "org.springdoc:springdoc-openapi-bom:$springDocVersion"
+            mavenBom "io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom:$otelInstrumentationVersion"
         }
     }
 
@@ -65,10 +72,31 @@ subprojects {
     }
 }
 
-tasks.named('assemble') {
-    dependsOn subprojects.collect { it.tasks.named('assemble') }
+project(':boot') {
+    base {
+        archivesName = rootProject.name
+    }
+
+    springBoot.buildInfo {
+        properties {
+            name = rootProject.name
+        }
+    }
+
+    tasks.named('bootRun') {
+        workingDir = rootProject.projectDir
+        systemProperty 'spring.profiles.active',
+                System.getProperty('spring.profiles.active', System.getenv('SPRING_PROFILES_ACTIVE') ?: 'local')
+    }
+
+    tasks.named('bootBuildImage') {
+        imageName = "${rootProject.name}:${project.version}"
+        runImage = "mcr.microsoft.com/playwright/java:v$playwrightVersion"
+    }
 }
 
-tasks.named('check') {
-    dependsOn subprojects.collect { it.tasks.named('check') }
+['assemble', 'check'].each { taskName ->
+    tasks.named(taskName) {
+        dependsOn subprojects.collect { it.tasks.named(taskName) }
+    }
 }
