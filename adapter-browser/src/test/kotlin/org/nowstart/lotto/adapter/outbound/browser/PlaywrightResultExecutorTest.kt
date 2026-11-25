@@ -35,6 +35,24 @@ class PlaywrightResultExecutorTest {
     }
 
     @Test
+    fun `결과 행이 없으면 빈 목록을 반환한다`() {
+        assertThat(executor.check(page)).isEmpty()
+    }
+
+    @Test
+    fun `상세 캡처가 모두 실패하면 원인을 보존한 PlaywrightException을 던진다`() {
+        val row = mockk<Locator>(relaxed = true)
+        val failure = TimeoutError("detail modal timed out")
+        every { rows.count() } returns 1
+        every { rows.nth(0) } returns row
+        every { page.locator(BrowserConstants.DETAIL_MODAL).waitFor() } throws failure
+
+        assertThatThrownBy { executor.check(page) }
+            .isInstanceOf(PlaywrightException::class.java)
+            .hasCause(failure)
+    }
+
+    @Test
     fun `보이는 행도 빈 결과 표시도 나타나지 않으면 판독 불가로 본다 (표가 늦게 채워지는 경우)`() {
         every { firstContent.waitFor(any()) } throws TimeoutError("Timeout 15000ms exceeded")
 
