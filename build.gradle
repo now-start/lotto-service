@@ -20,7 +20,7 @@ ext {
 // 공유 CI(now-start/gitops)는 루트의 version과 JavaLanguageVersion.of(...)를 읽고, 루트에서 bootBuildImage를 실행한다.
 allprojects {
     group = 'org.nowstart'
-    version = '9.4.8'
+    version = '9.4.9'
 
     repositories {
         mavenCentral()

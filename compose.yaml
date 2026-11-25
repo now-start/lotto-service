@@ -1,7 +1,7 @@
 services:
   phantom2691:
     user: root
-    image: ghcr.io/now-start/lotto-service:9.4.8
+    image: ghcr.io/now-start/lotto-service:9.4.9
     environment:
       - TZ=UTC
       - SPRING_CONFIG_IMPORT
