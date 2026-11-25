@@ -1,0 +1,71 @@
+name: Release policy
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  service-version:
+    name: Service version
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Check the Gradle version and Compose image
+        shell: ruby {0}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          require 'open3'
+          require 'rubygems/version'
+          require 'yaml'
+
+          def git(*args)
+            output, status = Open3.capture2('git', *args)
+            abort "git #{args.first} failed" unless status.success?
+            output
+          end
+
+          base = ENV.fetch('BASE_SHA')
+          merged = ENV.fetch('GITHUB_SHA')
+          paths = %w[
+            :(glob)**/src/** *.gradle *.gradle.kts gradlew gradlew.bat gradle/**
+            gradle.properties gradle.lockfile */gradle.properties */gradle.lockfile
+            buildSrc/** build-logic/** compose.yaml Dockerfile* */Dockerfile* *.Dockerfile
+            .dockerignore :(exclude)docs/**
+          ]
+          if git('diff', '--no-renames', '--name-only', '-z', base, merged, '--', *paths).empty?
+            puts 'No service code, build, or runtime configuration changed.'
+            exit
+          end
+
+          def service_version(commit)
+            script = git('show', "#{commit}:build.gradle").gsub(%r{/\*.*?\*/}m, '')
+            blocks = script.scan(/^allprojects[ \t]*\{(.*?)^\}/m).flatten
+            versions = blocks.flat_map { |block| block.scan(/^[ \t]+version[ \t]*=[ \t]*(["'])([^"'\n]+)\1[ \t]*(?:\/\/.*)?$/) }
+            value = versions.first.last if versions.one?
+            number = /(?:0|[1-9][0-9]*)/
+            pattern = /\A#{number}\.#{number}\.#{number}(?:-(?:alpha|beta|rc)\.#{number})?\z/
+            abort "Expected one literal service version in build.gradle at #{commit}" unless value && value.size <= 128 && pattern.match?(value)
+            value
+          end
+
+          previous = service_version(base)
+          current = service_version(merged)
+          unless Gem::Version.new(current) > Gem::Version.new(previous)
+            abort "Bump the Gradle service version above #{previous} (found #{current})."
+          end
+
+          compose = YAML.safe_load(git('show', "#{merged}:compose.yaml"), aliases: true)
+          expected = "ghcr.io/now-start/lotto-service:#{current}"
+          unless compose.dig('services', 'phantom2691', 'image') == expected
+            abort "Set services.phantom2691.image in compose.yaml to #{expected}."
+          end
+          puts "Service version #{previous} -> #{current} matches #{expected}."
