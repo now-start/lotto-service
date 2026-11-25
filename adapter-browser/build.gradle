@@ -1,6 +1,6 @@
 dependencies {
     implementation project(':application')
-    implementation "com.microsoft.playwright:playwright:$playwrightVersion"
+    implementation "com.microsoft.playwright:playwright:${rootProject.playwrightVersion}"
     implementation 'org.springframework:spring-context'
     implementation 'jakarta.annotation:jakarta.annotation-api'
     implementation 'org.slf4j:slf4j-api'

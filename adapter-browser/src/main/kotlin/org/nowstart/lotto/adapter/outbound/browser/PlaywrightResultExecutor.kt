@@ -36,7 +36,7 @@ class PlaywrightResultExecutor {
 
         // 파싱 가능한 행이 있는데 상세 캡처가 전부 실패한 경우는 이상 신호이므로 실패로 처리한다.
         // 일시적 오류일 수 있으므로 재시도 대상인 PlaywrightException으로 던져 재시도 정책을 우회하지 않는다(원인 보존).
-        if (resultRows.isNotEmpty() && results.isEmpty()) {
+        if (lastCaptureFailure != null && results.isEmpty()) {
             throw PlaywrightException(
                 "결과 ${resultRows.size}행의 상세 캡처가 모두 실패했습니다 (selector 변경/일시 오류 의심)",
                 lastCaptureFailure,
