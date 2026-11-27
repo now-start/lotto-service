@@ -1,6 +1,8 @@
 # lotto
 
 [![Build and Push Docker Image](https://github.com/now-start/lotto-service/actions/workflows/build.yaml/badge.svg)](https://github.com/now-start/lotto-service/actions/workflows/build.yaml)
+[![JaCoCo 라인 커버리지](https://github.com/now-start/lotto-service/blob/coverage/jacoco.svg?raw=true)](https://github.com/now-start/lotto-service/actions/workflows/build.yaml)
+[![JaCoCo 분기 커버리지](https://github.com/now-start/lotto-service/blob/coverage/jacoco-branches.svg?raw=true)](https://github.com/now-start/lotto-service/actions/workflows/build.yaml)
 
 로또 자동 구매
 
