@@ -19,7 +19,5 @@ permissions:
 jobs:
   app:
     uses: now-start/gitops/.github/workflows/reusable-java-app.yaml@main
-    with:
-      shared-coverage: true
     secrets:
       registry-password: ${{ secrets.GITHUB_TOKEN }}
